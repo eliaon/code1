@@ -1,9 +1,10 @@
-#ifndef LHANPDF_HPP
-#define LHANPDF_HPP
+
+#ifndef LHAPDF_HPP
+#define LHAPDF_HPP
 
 #include <memory>
 #include <string>
-#include <LHAPDF/LHAPDF.h>
+#include <LHAPDF/LHAPDF.h> // Make sure LHAPDF is installed and your includePath is set correctly
 
 struct Meson;
 

@@ -1,4 +1,4 @@
-#include "ctes.h"
+#include "ctes.hpp"
 #include <cmath>
 
 // --------- PARÂMETROS DE INTEGRAÇÃO ---------------
@@ -64,8 +64,9 @@ const double mc_GBW  = 1.3528;
 const double mb_GBW  = 4.5;
 
 
-const double mc_ipsat = 1.4;//1.3528;
-const double ms_ipsat = 0.14;//0.03;
+// Mäntysaari & Zurita 2018 (Phys. Rev. D 98, 036002), Table I (IPsat, HERA I)
+const double mc_ipsat = 1.3528;
+const double ms_ipsat = 0.03;
 
 // ------------ PARAMETROS DGLAP ------------------
 

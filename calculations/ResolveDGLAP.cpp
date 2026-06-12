@@ -4,8 +4,8 @@
 #include <functional>
 #include <iomanip>
 
-#include "ctes.h"
-#include "utils.h"
+#include "ctes.hpp"
+#include "utils.hpp"
 
 namespace DGLAP{
 

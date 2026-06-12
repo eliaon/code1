@@ -1,10 +1,10 @@
 #include "LHAPDF.hpp"
 #include <LHAPDF/LHAPDF.h>
-#include "../other/utils.h"
-#include "../other/ctes.h"
-#include "../other/plot.h"
+#include "../other/utils.hpp"
+#include "../other/ctes.hpp"
+#include "../other/plots/plot_other.hpp"
 #include "../other/integration.hpp"
-#include "../calculations/wavefunctions.h"
+#include "../calculations/wavefunctions.hpp"
 
 #include <cmath>
 #include <fstream>
@@ -15,10 +15,10 @@ LHAnPDF::LHAnPDF(const std::string& setname, int member)
 {
     pdf = std::unique_ptr<LHAPDF::PDF>(LHAPDF::mkPDF(setname, member));
 
-    // valores default (ajuste conforme seu fit)
-    sigma0 = 23.0;   // mb
+    // BGBK/BGK-like defaults. sigma0 must be in GeV^-2 because r is in GeV^-1.
+    sigma0 = 23.0 * mb_to_gev2;
     C = 0.29;
-    mu0_2 = 1.85; // GeV²
+    mu0_2 = 1.85; // GeV^2
 }
 
 LHAnPDF::~LHAnPDF() = default;
@@ -26,7 +26,7 @@ LHAnPDF::~LHAnPDF() = default;
 // --- PDF ---
 double LHAnPDF::gluon(double x, double Q2) const {
     double Q = std::sqrt(Q2);
-    return pdf->xfxQ(21, x, Q) / x;  // CORRETO
+    return pdf->xfxQ(21, x, Q);
 }
 
 double LHAnPDF::alpha_s(double Q2) const {
@@ -45,7 +45,7 @@ double LHAnPDF::sigma_qq_p(double x, double r) const {
     double xg = gluon(x, mu2_val);
     double as = alpha_s(mu2_val);
 
-    double arg = (M_PI*M_PI/6.0) * r*r * as * xg;
+    double arg = (M_PI * M_PI / (3.0 * sigma0)) * r * r * as * xg;
 
     return sigma0 * (1.0 - std::exp(-arg));
 }

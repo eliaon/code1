@@ -1,10 +1,9 @@
-#include "../other/utils.h"
-#include "../other/ctes.h"
-#include "../calculations/wavefunctions.h"
+#include "../other/utils.hpp"
+#include "../other/ctes.hpp"
+#include "../calculations/wavefunctions.hpp"
 #include "../calculations/nuclear.hpp"
 #include "../other/integration.hpp"
-#include "../other/correcs.h"
-#include "../other/plot.h"
+#include "../other/correcs.hpp"
 #include "../calculations/nuclear.hpp"
 
 #include <sstream>
@@ -45,7 +44,7 @@ double N_p(double r,  double x, parametros_GBW params)
 {
     double Qs2 = QS2(x, params);
     double arg = (r * r) * Qs2 / 4.0;
-    return (1.0 - exp(-arg))*std::pow(1.0-x, 5.26);
+    return (1.0 - exp(-arg))*low_x_factor(x);
 }
 
 double sigma_qq_p(double r, double x, parametros_GBW params)
@@ -88,12 +87,8 @@ double sigma_model(double x, double B, double omega, const Meson& M, double Q2)
      parametros_GBW params = gbw; // ou escolha outro conjunto de parâmetros se desejar
      double amp = GBW::amplitude_model(x, B, omega, M, Q2);
      double B_slope_val = B_slope(x, Q2, M);
-     double lambda_e = calculate_lambda(x, 0.0, Q2, M, "GBW");
-     double RG_val = RG(x, Q2, lambda_e, M);
-     double beta_val = beta(x, Q2, lambda_e, M);
-    
-     double correction_factor = RG_val * RG_val * (1.0 + beta_val * beta_val);
-     double sigma_gev = correction_factor * (amp * amp) / (16.0 * M_PI * B_slope_val);
+     const SkewCorrection skew = compute_skew_correction(x, 0.0, Q2, M, "GBW(old)");
+     double sigma_gev = skew.factor * (amp * amp) / (16.0 * M_PI * B_slope_val);
      double sigma_nb = sigma_gev * GeV2_to_nb;
      return sigma_nb;
     }

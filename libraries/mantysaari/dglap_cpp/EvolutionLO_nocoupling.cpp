@@ -5,11 +5,8 @@
 #include "EvolutionLO_nocoupling.h"
 #include <cmath>
 #include <cstdlib>
-#include <boost/math/special_functions/gamma.hpp>
 
 #define PR(x) cout << #x << " = " << (x) << endl;
-
-using boost::math::beta;
 
 inline complex<double> SQR(complex<double> x)
 {
@@ -123,24 +120,22 @@ void EvolutionLO_gluon::reno(complex<double> *fn, double alpq, int nmax, int cou
         
         // x*g = A_g x^(-lambda_g) (1-x)^5.6
         // -one and +one as we parametrize g, not x*g
-        complex<double> gln = ag * beta(xn - lambdag - one, 5.6+one);
+        //complex<double> gln = ag * beta(xn - lambdag - one, 5.6+one);
         
-
-
-
         // x*g = A_g x^(-lambda_g) (1-x)^6
         // Mellin transformed g analytically
         
-        // FORMA ORIGINAL DO MANTYSAARI
-        //complex<double> gln = ag * (
-        //    1.0 / (xn + 5.0 - lambdag)
-        //    - 6.0 / (xn + 4.0 - lambdag)
-        //    + 15.0 / (xn + 3.0 - lambdag)
-        //    - 20.0 / (xn + 2.0 -lambdag)
-        //    + 15.0 / (xn + 1.0 - lambdag)
-        //    - 6.0 / (xn - lambdag)
-        //    + 1.0 / (xn - lambdag - 1.0)
-        //                            );
+        
+        
+        complex<double> gln = ag * (
+            1.0 / (xn + 5.0 - lambdag)
+            - 6.0 / (xn + 4.0 - lambdag)
+            + 15.0 / (xn + 3.0 - lambdag)
+            - 20.0 / (xn + 2.0 -lambdag)
+            + 15.0 / (xn + 1.0 - lambdag)
+            - 6.0 / (xn - lambdag)
+            + 1.0 / (xn - lambdag - 1.0)
+                                    );
        
 	// Test: x*g = A_g x^(-lambda_g) (1-x)^1
 	 //complex<double> gln = ag * ( 1.0 / ( (-1.0 + xn - lambdag) * (xn - lambdag) ) ); 

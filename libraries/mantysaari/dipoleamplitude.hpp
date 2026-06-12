@@ -10,7 +10,10 @@
  *
  * Questions and comments: Heikki Mäntysaari <heikki.mantysaari@jyu.fi>
  */
-#pragma once
+
+#ifndef MZ_IPSAT_DIPOLEAMPLITUDE_HPP
+#define MZ_IPSAT_DIPOLEAMPLITUDE_HPP
+
 #include "dglap_cpp/AlphaStrong.h"
 #include "dglap_cpp/EvolutionLO_nocoupling.h"
 
@@ -82,7 +85,7 @@ class DipoleAmplitude
         bool GetSaturation() { return saturation; }
         void SetSaturation(bool s) { saturation = s; }
     
-    public:
+    private:
         EvolutionLO_gluon *cppdglap;
         AlphaStrong *alphas;
         bool saturation;   // True for ipsat, false for ipnonsat
@@ -100,3 +103,5 @@ class DipoleAmplitude
 };
     
 };
+
+#endif // MZ_IPSAT_DIPOLEAMPLITUDE_HPP

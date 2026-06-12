@@ -11,19 +11,39 @@
 #include <algorithm>
 #include <filesystem>
 
-#include "ctes.h"
-#include "utils.h"
-#include "integration.hpp"
-#include "plot.h"
 
-#include "../dipole_amplitudes/GBW.h"
+
+#include "ctes.hpp"
+#include "utils.hpp"
+#include "integration.hpp"
+
+#include "../dipole_amplitudes/GBW.hpp"
 #include "../dipole_amplitudes/LHAPDF.hpp"
-#include "../dipole_amplitudes/ipsat.h"
+#include "../dipole_amplitudes/bCGC.hpp"
+#include "../dipole_amplitudes/ipsat.hpp"
+#include "../dipole_amplitudes/IIM.hpp"
 #include "../libraries/mantysaari/dipoleamplitude.hpp"
 #include "../calculations/nuclear.hpp"
 
 
+namespace {
+LHAnPDF& ct14lo_pdf()
+{
+    thread_local LHAnPDF pdf("CT14lo");
+    return pdf;
+}
 
+MZ_ipsat::DipoleAmplitude& ipsat_dipole()
+{
+    thread_local MZ_ipsat::DipoleAmplitude dipole(MZ_ipsat::MZ_IPSAT);
+    thread_local bool lookup_enabled = [] {
+        dipole.EnableLookupTable();
+        return true;
+    }();
+    (void)lookup_enabled;
+    return dipole;
+}
+} // namespace
 
 std::string extrair_nome_base(const std::string& caminho)
 {
@@ -174,11 +194,29 @@ Meson Upsilon_BG_GBW_42(
     0.480,
     0.57
 );
+// Mäntysaari & Zurita 2018, Table II (IPsat, boosted Gaussian)
+namespace {
+constexpr double R2_Jpsi_ipsat = 1.5070 * 1.5070;
+constexpr double R2_phi_ipsat  = 3.3922 * 3.3922;
+constexpr double R2_rho_ipsat  = 3.6376 * 3.6376;
+
+bool uses_ipsat_mesons(const std::string& dipole_model)
+{
+    std::string lower = dipole_model;
+    std::transform(lower.begin(), lower.end(), lower.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return lower == "ipsat";
+}
+} // namespace
+
+// GLC: sem parâmetros na Table II; mantidos para comparação (massas IPsat)
 Meson Jpsi_GLC_ipsat("psi", "Jpsi_GLC", massa_psi, mc_ipsat, qJ, 1.23, 6.5, 0.83, 3.0);
 Meson phi_GLC_ipsat ("phi",  "phi_GLC",  massa_phi, ms_ipsat, qS, 4.75, 16.0, 1.41, 9.7);
+Meson rho_GLC_ipsat ("rho",  "rho_GLC",  massa_rho, ms_ipsat, qU2, 4.47, 21.9, 1.79, 10.4);
 
-Meson Jpsi_BG_ipsat ("psi", "Jpsi_BG",  massa_psi, mc_ipsat, qJ, 0.578, 0.575, 2.3);//R2_psi);
-Meson phi_BG_ipsat  ("phi",  "phi_BG",   massa_phi, ms_ipsat, qS, 0.919, 0.825, 11.2);//R2_phi);
+Meson Jpsi_BG_ipsat("psi", "Jpsi_BG", massa_psi, mc_ipsat, qJ, 0.5890, 0.5860, R2_Jpsi_ipsat);
+Meson phi_BG_ipsat ("phi", "phi_BG",  massa_phi, ms_ipsat, qS, 0.9950, 0.8400, R2_phi_ipsat);
+Meson rho_BG_ipsat ("rho", "rho_BG",  massa_rho, ms_ipsat, qU2, 0.9942, 0.8926, R2_rho_ipsat);
 
 
 
@@ -289,6 +327,7 @@ std::map<std::string, MesonModelsGBW> meson_modelsGBW = {
 std::map<std::string, MesonModelsipsat> meson_modelsipsat = {
     {"psi", {Jpsi_GLC_ipsat, Jpsi_BG_ipsat}},
     {"phi", {phi_GLC_ipsat, phi_BG_ipsat}},
+    {"rho", {rho_GLC_ipsat, rho_BG_ipsat}},
 };
 
 // ----------------- função escolhe meson ----------
@@ -315,31 +354,53 @@ Meson input_meson(const std::string model) // devolve o meson glc
     }
 
     // -------- SELEÇÃO DO MODELO --------
-    if (model == "GBW") {
-        auto it = meson_modelsGBW.find(meson_input);
-        if (it == meson_modelsGBW.end()) {
-            std::cerr << "Meson nao encontrado no modelo GBW. Usando psi.\n";
-            return meson_modelsGBW.at("psi").M_GLC;
-        }
-        return it->second.M_GLC;
-    }
-    else if (model == "ipsat") {
+    if (uses_ipsat_mesons(model)) {
         auto it = meson_modelsipsat.find(meson_input);
         if (it == meson_modelsipsat.end()) {
-            std::cerr << "Meson nao encontrado no modelo ipsat. Usando psi.\n";
+            std::cerr << "Meson nao encontrado no modelo IPSAT. Usando psi.\n";
             return meson_modelsipsat.at("psi").M_GLC;
         }
         return it->second.M_GLC;
     }
-    else {
-        std::cerr << "Modelo desconhecido: " << model
-                  << ". Usando GBW por padrao.\n";
 
+    if (model == "GBW" || model == "bCGC" || model == "BCGC" || model == "bcgc" ||
+        model == "GBW(new)" || model == "GBW(old)" || model == "IIM_S" ||
+        model == "IIM_RS" || model == "LHAnPDF") {
         auto it = meson_modelsGBW.find(meson_input);
         if (it == meson_modelsGBW.end()) {
+            std::cerr << "Meson nao encontrado no modelo " << model << ". Usando psi.\n";
             return meson_modelsGBW.at("psi").M_GLC;
         }
         return it->second.M_GLC;
+    }
+
+    std::cerr << "Modelo desconhecido: " << model
+              << ". Usando GBW por padrao.\n";
+
+    auto it = meson_modelsGBW.find(meson_input);
+    if (it == meson_modelsGBW.end()) {
+        return meson_modelsGBW.at("psi").M_GLC;
+    }
+    return it->second.M_GLC;
+}
+
+const Meson& get_meson_bg(const std::string& meson_key, const std::string& dipole_model)
+{
+    if (uses_ipsat_mesons(dipole_model)) {
+        return meson_modelsipsat.at(meson_key).M_BG;
+    }
+    return meson_modelsGBW.at(meson_key).M_BG;
+}
+
+void warn_ipsat_light_meson(const Meson& M, const std::string& dipole_model)
+{
+    if (!uses_ipsat_mesons(dipole_model)) {
+        return;
+    }
+    if (M.meson == "phi" || M.meson == "rho") {
+        std::cerr << "AVISO [IPSAT]: producao exclusiva de " << M.meson
+                  << " nao e confiavel com m_l=0.03 GeV (Mantysaari & Zurita 2018, Sec. V). "
+                  << "Dipolos grandes dominam; interprete os resultados com cautela.\n";
     }
 }
 void perfil(const Meson& meson){
@@ -366,6 +427,27 @@ void perfil(const Meson& meson){
 }
 
 // ---------------- slope B(Q2) ----------------
+double B_regge(double W, const Meson& M) // cálculo de B usando a fórmula de Regge, com parâmetros ajustados para rho e phi
+{                                        // Light vector meson photoproduction in ultraperipheral heavy ion
+    if (M.meson == "rho"){               // collisions at the LHC within the Reggeometric Pomeron approach (https://arxiv.org/abs/2301.05136v2)
+        double a = 0.60, b = 0.9, alpha = 0.21, W0 = 1.0;
+        double B0 = 4.0 * (a/std::pow(M.MV, 2) + b / (2.0*0.938));
+        double B = B0 + 4.0 * alpha * std::log(W / W0);
+        cout << "B de Regge para rho: " << B << endl;
+        return B;
+    } else if (M.meson == "phi"){
+        double a = 0.0, b = 1.34, alpha = 0.17, W0 = 1.0;
+        double B0 = 4.0 * (a/std::pow(M.MV, 2) + b / (2.0*0.938));
+        double B = B0 + 4.0 * alpha * std::log(W / W0);
+        cout << "B de Regge para phi: " << B << endl;
+        return B;
+    } else {
+        std::cerr << "Méson desconhecido para cálculo de B: " << M.meson << std::endl;
+        return 0.0;
+    }
+}
+
+
 double B_slope(double x, double Q2, const Meson& M) {
     double W = x_to_W(x, M);
     if (M.meson == "psi" || M.meson == "upsilon42" || M.meson == "upsilon45"){
@@ -375,6 +457,7 @@ double B_slope(double x, double Q2, const Meson& M) {
         else if (M.meson == "phi" || M.meson == "rho"){
             double B2 = 0.55 * (14.0 / pow((Q2 + M.MV*M.MV), 0.2) + 1.0);
             return B2;}
+            //return B_regge(W, M);}
             else {
                 std::cerr << "Méson desconhecido para cálculo de B: " << M.meson << std::endl;
                 return 0.0;
@@ -398,329 +481,9 @@ std::string timestamp(void)
 }
 
 
-// ------------ LÊ CSV COM 2 COLUNAS, PARA N 
-void read_two_columns(
-    const std::string& filename,
-    std::vector<double>& x,
-    std::vector<double>& y)
-{
-    std::ifstream file(filename);
-    std::cout << "Reading file: " << filename << std::endl;
-    if(!file)
-        throw std::runtime_error("Cannot open file: " + filename);
 
-    std::string line;
-
-    std::getline(file,line); // header
-
-    while(std::getline(file,line))
-    {
-        if(line.empty()) continue;
-
-        std::stringstream ss(line);
-        std::string a,b;
-
-        std::getline(ss,a,',');
-        std::getline(ss,b,',');
-
-        x.push_back(std::stod(a));
-        y.push_back(std::stod(b));
-    }
-}
-
-void read_sigma_exp(
-    const std::string& filename,
-    std::vector<int>& dataset,
-    std::vector<double>& W,
-    std::vector<double>& sigma,
-    std::vector<double>& err)
-{
-    std::ifstream file(filename);
-    std::string line;
-
-    while (std::getline(file, line))
-    {
-        // remove espaços iniciais
-        line.erase(0, line.find_first_not_of(" \t"));
-
-        if (line.empty() || line[0] == '#')
-            continue;
-
-        std::vector<double> cols;
-
-        // --- tenta parsing como CSV ---
-        {
-            std::stringstream ss(line);
-            std::string token;
-
-            while (std::getline(ss, token, ','))
-            {
-                try {
-                    cols.push_back(std::stod(token));
-                }
-                catch (...) {
-                    // ignora tokens não numéricos (ex: "-")
-                }
-            }
-        }
-
-        // --- fallback: separação por espaço/tab ---
-        if (cols.size() < 3)
-        {
-            cols.clear();
-            std::stringstream ss(line);
-            std::string token;
-
-            while (ss >> token)
-            {
-                try {
-                    cols.push_back(std::stod(token));
-                }
-                catch (...) {
-                    // ignora lixo
-                }
-            }
-        }
-
-        if (cols.size() < 3)
-            continue;
-
-        // --- caso 1: formato simples ---
-        if (cols.size() == 3)
-        {
-            int d = 0;
-            dataset.push_back(d);
-            W.push_back(cols[0]);
-            sigma.push_back(cols[1]);
-            err.push_back(cols[2]);
-        }
-
-        // --- caso 2: erro assimétrico (4 colunas) ---
-        else if (cols.size() >= 4 && cols.size() < 8)
-        {
-            int d = 0;
-
-            double W_val = cols[0];
-            double s_val = cols[1];
-            double dy_minus = std::abs(cols[2]);
-            double dy_plus  = std::abs(cols[3]);
-
-            double e_val = 0.5 * (dy_minus + dy_plus);
-
-            dataset.push_back(d);
-            W.push_back(W_val);
-            sigma.push_back(s_val);
-            err.push_back(e_val);
-        }
-
-        // --- caso 3: HEPData completo ---
-        else if (cols.size() >= 8)
-        {
-            int d = static_cast<int>(cols[0]);
-
-            double W_val     = cols[1];
-            double sigma_val = cols[3];
-
-            double stat_p = cols[4];
-            double stat_m = std::abs(cols[5]);
-            double sys_p  = cols[6];
-            double sys_m  = std::abs(cols[7]);
-
-            double stat = 0.5 * (stat_p + stat_m);
-            double sys  = 0.5 * (sys_p + sys_m);
-
-            double err_val = std::sqrt(stat*stat + sys*sys);
-
-            dataset.push_back(d);
-            W.push_back(W_val);
-            sigma.push_back(sigma_val * 1000.0); // μb → nb
-            err.push_back(err_val * 1000.0);
-        }
-    }
-}
-
-
-//-------------- LEITOR DE DADOS EXPERIMENTAIS DO XYSCAN ----------------------
-void read_xyscan_csv(const std::string& filename,
-                     std::vector<double>& W,
-                     std::vector<double>& sigma,
-                     std::vector<double>& error)
-{
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Erro ao abrir arquivo: " << filename << "\n";
-        return;
-    }
-
-    std::string line;
-
-    while (std::getline(file, line)) {
-
-        // ignora comentários e linhas vazias
-        if (line.empty() || line[0] == '#')
-            continue;
-
-        std::stringstream ss(line);
-        std::string col;
-        std::vector<double> values;
-
-        while (std::getline(ss, col, ',')) {
-            if (col.empty()) continue; // ignora vírgula final
-            values.push_back(std::stod(col));
-        }
-
-        if (values.size() < 3)
-    continue;
-
-double w   = values[0];
-double sig = values[1];
-double err;
-
-// caso 1: CSV com 3 colunas (erro já simétrico)
-if (values.size() == 3) {
-    err = values[2];
-}
-// caso 2: CSV com 4 colunas (erro assimétrico)
-else {
-    double dy_minus = values[2];
-    double dy_plus  = values[3];
-    err = 0.5 * (dy_minus + dy_plus);
-}
-
-W.push_back(w);
-sigma.push_back(sig);
-error.push_back(err);
-    }
-
-    file.close();
-}
-
-// ------------ LÊ CSV'S COM 1 INDEPENDENTE E DUAS DEPENDENTES, IDEAL PARA COMPARAÇÕES
-// ------------- BOOSTED GAUSSIAN - GAUSSIAN LIGHT CONE
-
-void read_csv(
-    const std::string& filename,
-    std::vector<double>& x,
-    std::vector<double>& glc,
-    std::vector<double>& bg)
-{
-    std::ifstream file(filename);
-
-    if(!file)
-        throw std::runtime_error("Cannot open file: " + filename);
-
-    x.clear();
-    glc.clear();
-    bg.clear();
-
-    std::string line;
-
-    std::getline(file, line); // header
-    
-    while (std::getline(file, line))
-    {
-        if(line.empty()) continue;
-
-        std::stringstream ss(line);
-        std::string a,b,c;
-
-        if (!std::getline(ss, a, ',')) continue;
-        if (!std::getline(ss, b, ',')) continue;
-        if (!std::getline(ss, c, ',')) continue;
-
-        try {
-            x.push_back(std::stod(a));
-            glc.push_back(std::stod(b));
-            bg.push_back(std::stod(c));
-        }
-        catch (...) {
-            // ignora linha mal formatada
-            continue;
-        }
-    }
-
-    // sanity check forte
-    if (x.size() != glc.size() || x.size() != bg.size()) {
-        throw std::runtime_error("CSV columns size mismatch in: " + filename);
-    }
-}
-
-void read_rapidity_hepdata(
-    const std::string& filename,
-    std::vector<double>& y,
-    std::vector<double>& dsdy,
-    std::vector<double>& err)
-{
-    std::ifstream file(filename);
-    std::string line;
-
-    while (std::getline(file, line))
-    {
-        if (line.empty()) continue;
-
-        //  remove espaços iniciais
-        line.erase(0, line.find_first_not_of(" \t"));
-
-        if (line.empty()) continue;
-
-        // ignora headers
-        if (line[0] == '#' || line[0] == '|')
-            continue;
-        std::stringstream ss(line);
-        std::string token;
-        std::vector<double> cols;
-
-        while (std::getline(ss, token, ','))
-        {
-            try {
-                cols.push_back(std::stod(token));
-            } catch (...) {}
-        }
-
-        if (cols.size() < 8) continue;
-
-        double y_val = cols[0];
-        double sigma = cols[3];
-
-        double stat_p = cols[4];
-        double stat_m = std::abs(cols[5]);
-        double sys_p  = cols[6];
-        double sys_m  = std::abs(cols[7]);
-
-        double stat = 0.5 * (stat_p + stat_m);
-        double sys  = 0.5 * (sys_p + sys_m);
-
-        double error = std::sqrt(stat*stat + sys*sys);
-
-        y.push_back(y_val);
-        dsdy.push_back(sigma);
-        err.push_back(error);
-    }
-}
 
 // -------------- CARREGA SET DE VALORES DE CURVAS DE N
-
-bool load_set(
-    const std::string& xstr,
-    std::vector<double>& r2_ipsat,
-    std::vector<double>& N_ipsat,
-    std::vector<double>& r2_gbw,
-    std::vector<double>& N_gbw,
-    std::vector<double>& r2_iim,
-    std::vector<double>& N_iim)
-{
-    std::cout << "Loading x=" << xstr << std::endl;
-    read_two_columns("csv/N_ipsat_x=" + xstr + ".csv", r2_ipsat, N_ipsat);
-    read_two_columns("csv/N_GBW_x=" + xstr + ".csv",  r2_gbw,  N_gbw);
-    read_two_columns("csv/N_IIM_x=" + xstr + ".csv",  r2_iim,  N_iim);
-    if(r2_ipsat.empty() || r2_gbw.empty() || r2_iim.empty())
-{
-    std::cerr << "Empty dataset for x=" << xstr << std::endl;
-    return false;
-}
-return true;
-}
-
 
 
 std::string get_meson()
@@ -793,14 +556,19 @@ double get_amplitude_p(double x, double Delta,double Q2, const Meson& M, std::st
             return amp;
         }
         else if (modelo == "LHAnPDF") {
-            // create an instance with a PDF set name and call it
-            // Provide a default PDF set name since LHAPDF has no default constructor
-            LHAnPDF lhapdf("CT14lo");
-            return lhapdf.amplitude_p(x, Q2, M);
+            return ct14lo_pdf().amplitude_p(x, Q2, M);
         }
         else if(modelo == "IPSAT") {
             return IPSAT::amplitude_p(x, Delta, Q2, M);
-        } else {
+        }
+        else if(modelo == "bCGC" || modelo == "BCGC" || modelo == "bcgc") {
+            return bCGC::amplitude_p(x, Delta, Q2, M);
+        } else if(modelo == "IIM_S" || modelo == "iim_s"){
+        return IIM::amplitude_p(x, Q2, M, IIM_S);
+
+        }else if(modelo == "IIM_RS" || modelo == "iim_rs"){
+        return IIM::amplitude_p(x, Q2, M, IIM_RS);
+        }else {
             std::cerr << "Modelo desconhecido: " << modelo << std::endl;
             return 0.0;
         }
@@ -815,14 +583,20 @@ double get_Np(double r, double x, std::string modelo, double b)
         return GBW::N_p(r, x, gbw_10);
     }
     else if (modelo == "LHAnPDF") {
-        LHAnPDF lhapdf("CT14lo");
-        return lhapdf.N_p(r, x);
+        return ct14lo_pdf().N_p(x, r);
     }
-    else if (modelo == "IPSAT") {
-        DipoleAmplitude dipole(MZ_IPSAT);
-        return dipole.N(r, x, b);
+    else if (modelo == "IPSAT") {;
+        return ipsat_dipole().N(r, x, b);
     }
-    else {
+    else if (modelo == "bCGC" || modelo == "BCGC" || modelo == "bcgc") {
+        return bCGC::N_p(r, x, b);
+    }
+    else if(modelo == "IIM_S" || modelo == "iim_s"){
+        return IIM::N_p(r, x, IIM_S);
+
+    }else if(modelo == "IIM_RS" || modelo == "iim_rs"){
+        return IIM::N_p(r, x, IIM_RS);
+    }else {
         std::cerr << "Modelo desconhecido: " << modelo << std::endl;
         return 0.0;
     }
@@ -835,12 +609,17 @@ double get_dipolo_p(double r, double x, double Delta, std::string modelo)
     } else if (modelo =="GBW(old)"){
         return GBW::sigma_qq_p(r, x, gbw);
     } else if (modelo == "IPSAT"){
-        DipoleAmplitude dipole(MZ_IPSAT);
-        return IPSAT::sigma_qq_p(r, x, Delta, dipole);
+        return IPSAT::sigma_qq_p(r, x, Delta, ipsat_dipole());
+    } else if (modelo == "bCGC" || modelo == "BCGC" || modelo == "bcgc"){
+        return bCGC::sigma_qq_p(r, x, Delta);
     } else if(modelo == "LHAnPDF"){
-        LHAnPDF lhapdf("CT14lo");
-        return lhapdf.sigma_qq_p(x, r);
-    } else {
+        return ct14lo_pdf().sigma_qq_p(x, r);
+    } else if (modelo == "IIM_S" || modelo == "iim_s"){
+        return IIM::sigma_qq(r, x, IIM_S);
+
+    }else if(modelo == "IIM_RS" || modelo == "iim_rs"){
+        return IIM::sigma_qq(r, x, IIM_RS);
+    }else{
         std::cerr << "Modelo desconhecido ou não implementado:" << modelo <<std::endl;
         return 0.0;
     }
@@ -865,4 +644,37 @@ string N_file(double x, std::string modelo)
     }
     return filename;
 }
+
+std::vector<double> W_space(double N, const Meson& M)
+{
+    double Wmin = x_to_W(1e-2, M);
+    double Wmax = 3e3;
+    int n_points = std::max(1, static_cast<int>(std::round(N)));
+    std::vector<double> values(n_points);
+
+    if (n_points == 1) {
+        values.front() = Wmin;
+        return values;
+    }
+
+    const double log_min = std::log(Wmin);
+    const double log_max = std::log(Wmax);
+
+    for (int i = 0; i < n_points; ++i) {
+        const double frac = static_cast<double>(i) / (n_points - 1);
+        values[i] = std::exp(log_min + frac * (log_max - log_min));
+    }
+
+    return values;
+}
+
+double low_x_factor(double x, double exp)
+{
+    const double xc = std::clamp(x, 0.0, 1.0);
+    return std::pow(1.0 - xc, exp);
+}
+
+
+
+
 

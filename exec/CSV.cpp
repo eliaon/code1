@@ -5,11 +5,22 @@
 #include <filesystem>
 
 #include "../calculations/sigma.hpp"
-#include "../other/utils.h"
-#include "../other/plot.h"
+#include "../other/utils.hpp"
 #include "../calculations/nuclear.hpp"
 
+#include "../other/plots/plot_sigma.hpp"
+#include "../other/plots/plot_rapidity.hpp"
+#include "../other/plots/plot_other.hpp"
+
+
+
 namespace CSV {
+    namespace {
+        bool is_proton_target(const Nucleus& nucleo)
+        {
+            return nucleo.name == "p" || nucleo.name == "proton";
+        }
+    }
 
     void N_p(std::string model){
         std::vector<double> x = {1e-2, 1e-3, 1e-4, 1e-5};
@@ -29,8 +40,9 @@ namespace CSV {
 {
     double Q2 = 0.0;
 
-    const Meson& M_GLC = input_meson("GBW");
-    const Meson& M_BG  = meson_modelsGBW.find(M_GLC.meson)->second.M_BG;
+    const Meson& M_GLC = input_meson(model);
+    const Meson& M_BG  = get_meson_bg(M_GLC.meson, model);
+    warn_ipsat_light_meson(M_GLC, model);
 
     std::cout << "Calculando sigma_p para " << M_GLC.meson
               << " com modelo " << model << "\n";
@@ -38,7 +50,7 @@ namespace CSV {
     std::filesystem::create_directories("out/csv/sigma/" + M_GLC.meson);
 
     std::string basepath = "out/csv/sigma/" + M_GLC.meson + "/" +
-                           M_GLC.meson + "_sigma_" + model;
+                           M_GLC.meson + "_sigma-gammap_" + model;
 
     std::string filename_csv = basepath + ".csv";
     std::string filename_dat = basepath + ".dat";
@@ -58,31 +70,26 @@ namespace CSV {
     fout_dat << "# W sigma_GLC sigma_BG\n";
 
     const int Nw = 10;
-    double Wmin = x_to_W(1e-2, M_GLC);
-    double Wmax = 3e3;
 
     using clock = std::chrono::steady_clock;
     auto start = clock::now();
 
-    std::vector<double> Wv(Nw), sigma_GLC_v(Nw), sigma_BG_v(Nw);
+    std::vector<double> sigma_GLC_v(Nw), sigma_BG_v(Nw);
+    std::vector<double> Wv = W_space(Nw, M_GLC);
 
     std::cout << "W (GeV), sigma_GLC (nb), sigma_BG (nb)\n";
 
     #pragma omp parallel for schedule(dynamic)
     for (int i = 0; i < Nw; ++i) {
-        double frac = static_cast<double>(i) / (Nw - 1);
-        double W = Wmin * std::pow(Wmax / Wmin, frac);
-
-        Wv[i] = W;
-        sigma_GLC_v[i] = gamma_p::sigma(W, Q2, M_GLC, model) * GeV2_to_nb;
-        sigma_BG_v[i]  = gamma_p::sigma(W, Q2, M_BG, model) * GeV2_to_nb;
-
-        std::cout << Wv[i] << " "
-                  << sigma_GLC_v[i] << " "
-                  << sigma_BG_v[i] << "\n";
+        sigma_GLC_v[i] = gamma_p::sigma(Wv[i], Q2, M_GLC, model) * GeV2_to_nb;
+        sigma_BG_v[i]  = gamma_p::sigma(Wv[i], Q2, M_BG, model) * GeV2_to_nb;
     }
 
     for (int i = 0; i < Nw; ++i) {
+        std::cout << Wv[i] << " "
+                  << sigma_GLC_v[i] << " "
+                  << sigma_BG_v[i] << "\n";
+
         // CSV
         fout_csv << Wv[i] << ","
                  << sigma_GLC_v[i] << ","
@@ -106,8 +113,47 @@ namespace CSV {
 
     plot_sigma(M_GLC.meson, filename_csv, model);
 }
+void dsigma_dt_csv(std::string model)
+{
+    double W = 70.0; // GeV
 
-    void sigma_gamma_A(std::string model, nucleous&Nucleo)
+    const Meson& M_GLC = input_meson(model);
+    const Meson& M_BG  = get_meson_bg(M_GLC.meson, model);
+    warn_ipsat_light_meson(M_GLC, model);
+
+    double Q2 = 0.0;
+    std::string W_str = doubleParaString(W);
+    std::string filename ="csv/" + M_GLC.meson + "_dsigma_dt_W=" + W_str + "GeV.csv";
+    std::ofstream fout(filename);
+    fout << "t,dsigma_dt_GLC,dsigma_dt_BG\n";
+
+    const int Npoints = 150;
+    double tmin = 0.0, tmax = 4.0; // GeV^2
+    std::vector<double> t_v(Npoints), dsdt_glc_v(Npoints), dsdt_bg_v(Npoints);
+
+    //esse for escolhe os valores de t e calcula a seção de choque para cada modelo, salvando no arquivo csv
+    #pragma omp parallel for schedule(dynamic)
+    for (int i = 0; i < Npoints; ++i) {
+        double frac = static_cast<double>(i) / (Npoints - 1);
+        double t = tmin + frac * (tmax - tmin);
+
+        t_v[i] = t;
+        dsdt_glc_v[i] = gamma_p::dsigma_dt(t, W, Q2, M_GLC, model) * GeV2_to_nb; // converte para nb/GeV^2
+        dsdt_bg_v[i]  = gamma_p::dsigma_dt(t, W, Q2, M_BG, model) * GeV2_to_nb;  // converte para nb/GeV^2
+    }
+
+    for (int i = 0; i < Npoints; ++i) {
+        std::cout << t_v[i] << "," << dsdt_glc_v[i] << "," << dsdt_bg_v[i] << "\n";
+        fout << t_v[i] << "," << dsdt_glc_v[i] << "," << dsdt_bg_v[i] << "\n";
+    }
+    fout.close();
+    std::cout << "Arquivo '" << filename << "' gerado." << std::endl;
+
+    plot_dsigma_dt(M_GLC.meson);
+}
+
+
+    void sigma_gamma_A(std::string model, Nucleus&Nucleo)
     {
     double Q2=0.0;
 
@@ -116,7 +162,8 @@ namespace CSV {
 
     std::string Q2_str = std::format("{:.3g}", Q2);
     std::string path = "out/csv/sigma/" + M_GLC.meson + "/"+M_GLC.meson + "_sigma-gamma"+
-                            Nucleo.name + "_" + model ;
+                            Nucleo.name + "_" + model + "_fc";
+    std::filesystem::create_directories("out/csv/sigma/" + M_GLC.meson);
     std::string filename_csv = path + ".csv";
     std::string filename_dat = path + ".dat";
     std::ofstream fout_csv(filename_csv);
@@ -128,35 +175,27 @@ namespace CSV {
     fout_dat << "# W sigma_GLC sigma_BG\n";
 
     const int Nw = 100;
-    double Wmin = x_to_W(1e-2, M_GLC);
-    double Wmax = 3e3;
+
+
+    std::vector<double> Wv = W_space(Nw, M_GLC);
 
     using clock = std::chrono::steady_clock;
     auto start = clock::now();
     
-    TA_Table table = precompute_TA(200, 50.0, Nucleo); // pré-calcula T_A(b) para Pb-208
+    TA_Table table = precompute_TA(200, 50.0, Nucleo); // pré-calcula T_A(b) para núcleos
 
-    std::vector<double> Wv(Nw), sigma_GLC_v(Nw), sigma_BG_v(Nw);
+    std::vector<double> sigma_GLC_v(Nw), sigma_BG_v(Nw);
 
 
     std::cout << "W (Gev), sigma_GLC (nb), sigma_BG (nb)\n";
     #pragma omp parallel for schedule(dynamic)
 for (int i = 0; i < Nw; ++i) {
+        sigma_GLC_v[i] = gamma_A::sigma(Wv[i], Q2, M_GLC, model, table, Nucleo) * GeV2_to_nb;
+        sigma_BG_v[i]  = gamma_A::sigma(Wv[i], Q2, M_BG, model, table, Nucleo) * GeV2_to_nb;
+    }
 
-    double frac = static_cast<double>(i) / (Nw - 1);
-    double W = Wmin * pow(Wmax / Wmin, frac);
-    double x = (M_GLC.MV * M_GLC.MV) / (W * W);
-
-    Wv[i] = W;
-
-    sigma_GLC_v[i] = gamma_A::sigma(W, Q2, M_GLC, model, table) * GeV2_to_nb;
-    sigma_BG_v[i]  = gamma_A::sigma(W, Q2, M_BG, model, table) * GeV2_to_nb;
-    std::cout << Wv[i] << "," << sigma_GLC_v[i] << "," << sigma_BG_v[i] << "\n";
-}
-//for (int i = 0; i < Nw; ++i) {
-//    std::cout << Wv[i] << "," << sigma_GLC_v[i] << "," << sigma_BG_v[i] << "\n";
-//}
     for (int i = 0; i < Nw; ++i) {
+    std::cout << Wv[i] << " " << sigma_GLC_v[i] << " " << sigma_BG_v[i] << "\n";
     fout_csv << Wv[i] << "," << sigma_GLC_v[i] << "," << sigma_BG_v[i] << "\n";
     fout_dat << Wv[i] << " " << sigma_GLC_v[i] << " " << sigma_BG_v[i] << "\n";
 }
@@ -168,11 +207,11 @@ for (int i = 0; i < Nw; ++i) {
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     std::cout << "Tempo de execução: " << duration << " ms" << std::endl;
     std::cout << "Arquivo '" << path << "'(csv e dat) gerado em " << duration << " ms" << std::endl;
-    plot_sigma_gammaA(M_GLC.meson, filename_csv, model);
+    plot_sigma_gammaA(M_GLC.meson, filename_csv, model, Nucleo);
 }
 
 
-    void rapidez_AA(double sqrt_s, std::string model, nucleous &Nucleo1, nucleous& Nucleo2)
+    void rapidez_AA(double sqrt_s, std::string model, Nucleus &Nucleo1, Nucleus& Nucleo2)
 {
     //double sqrt_s = 2.76e3; // GeV
 
@@ -252,4 +291,17 @@ for (int i = 0; i <= 2*Ny; ++i)
     std::cout << "Plot gerado para " << M_GLC.meson << " para a colisão " <<Nucleo1.name << Nucleo2.name 
                 <<" a "<< sqrt_s_str <<" TeV.\n";
 }
+}
+
+void create_TA_b_csv(std::string meson)
+{
+    std::vector<double> W, TA_GLC, TA_BG;
+
+    read_csv("out/csv/other/" + meson + "_TA_b.csv", W, TA_GLC, TA_BG);
+
+    std::ofstream out("out/csv/other/" + meson + "_TA_b_processed.csv");
+    out << "W,TA_GLC,TA_BG\n";
+    for(size_t i=0;i<W.size();++i)
+        out << W[i] << "," << TA_GLC[i] << "," << TA_BG[i] << "\n";
+    out.close();
 }

@@ -10,9 +10,9 @@ namespace CSV {
 
     void sigma_gamma_p(std::string model);
 
-    void sigma_gamma_A(std::string model, nucleous&Nucleo);
+    void sigma_gamma_A(std::string model, Nucleus&Nucleo);
 
-    void rapidez_AA(double sqrt_s, std::string model, nucleous &Nucleo1, nucleous& Nucleo2);
+    void rapidez_AA(double sqrt_s, std::string model, Nucleus &Nucleo1, Nucleus& Nucleo2);
 
 }
 

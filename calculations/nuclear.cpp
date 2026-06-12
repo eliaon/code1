@@ -1,24 +1,24 @@
 #include "../other/integration.hpp"
 #include "nuclear.hpp"
-#include "../other/ctes.h"
+#include "../other/ctes.hpp"
 
 #include <fstream>
 #include <cmath>
 #include <filesystem>
 
-nucleous Pb208("Pb", 82.0,                      // Número atômico 
+Nucleus Pb208("Pb", 82.0,                      // Número atômico 
                      6.62 * CFAC,               // Raio nuclear fm -> GeV^-1
                      0.546 * CFAC,              // diffusividade fm -> GeV^-1
                      0.1603/std::pow(CFAC, 3)); // densidade central fm^-3 -> GeV^3
                                                 // parâmetros típicos para Pb-208
 
-nucleous proton("p", 1.0,                      // Número atômico
+Nucleus proton("p", 1.0,                      // Número atômico
                      0.84 * CFAC,              // Raio do próton fm -> GeV^-1
                      0.0,                      // sem diffusividade
                      0.17/std::pow(CFAC, 3)); // densidade central ajustada para A=1 fm^-3 -> GeV^3
                                                 // parâmetros típicos para próton
 
-TA_Table precompute_TA(int Nb, double bmax, const nucleous& N)
+TA_Table precompute_TA(int Nb, double bmax, const Nucleus& N)
 {
     TA_Table table;
     table.b_vals.resize(Nb);
@@ -71,12 +71,12 @@ double interpolate_TA(double b, const TA_Table& table)
     return T1 + (T2 - T1) * (b - b1) / (b2 - b1);
 }
 
-double rho_WS(double r, const nucleous& N)
+double rho_WS(double r, const Nucleus& N)
 {
     return N.rho0 / (1.0 + exp((r - N.R)/N.a));
 }
 
-double integral_rho(const nucleous& N)
+double integral_rho(const Nucleus& N)
 {
     double rmax = 20.0; // fm (suficiente para Pb)
     int Nr = 500;
@@ -91,7 +91,7 @@ double integral_rho(const nucleous& N)
     return 4.0 * M_PI * integral;
 }
 
-double compute_rho0(int A, const nucleous& N)
+double compute_rho0(int A, const Nucleus& N)
 {
     double I = integral_rho(N);
     return A / I;
@@ -169,7 +169,7 @@ TA_Table load_TA_table(const std::string& filename)
 // --------------------------------------------------
 // função principal
 // --------------------------------------------------
-TA_Table get_TA_table(const nucleous& nuc,
+TA_Table get_TA_table(const Nucleus& nuc,
                       int Nb,
                       double bmax)
 {

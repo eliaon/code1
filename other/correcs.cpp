@@ -1,30 +1,97 @@
 
-//#include "../calculations/DGLAP.hpp"
-//#include "../dipole_amplitudes/ipsat.h"
-//#include "bCGC.h"
-//#include "IIM.hpp"
+#include "correcs.hpp"
 #include "integration.hpp"
-#include "utils.h"
-#include "ctes.h"
-#include "../calculations/wavefunctions.h"
+#include "utils.hpp"
+#include "ctes.hpp"
+#include "../calculations/wavefunctions.hpp"
 #include "../calculations/sigma.hpp"
-#include "../dipole_amplitudes/GBW.h"
+#include "../dipole_amplitudes/GBW.hpp"
 #include "../libraries/mantysaari/dipoleamplitude.hpp"
 
+#include <algorithm>
 #include <cmath>
+#include <cctype>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
+#include <string>
 
 
-// Fatores de correção Rg e deltinha
- 
-double lnA(double y,double Delta, double Q2, const Meson& M,
+using namespace MZ_ipsat;
+
+double lnA(double y, double Delta, double Q2, const Meson& M,
+           std::string dipolemodel);
+
+namespace {
+
+constexpr double lambda_fortran_bcgc   = 0.28;
+constexpr double lambda_derivative_step = 1e-3;
+constexpr double lambda_boundary_x      = 1e-2;
+constexpr double lambda_min             = 0.05;
+constexpr double lambda_max             = 0.45;
+
+std::string normalize_model_name(std::string model)
+{
+    std::transform(model.begin(), model.end(), model.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return model;
+}
+
+bool uses_fortran_fixed_lambda(const std::string& dipolemodel)
+{
+    return normalize_model_name(dipolemodel) == "bcgc";
+}
+
+bool has_gbw_lambda(const std::string& dipolemodel)
+{
+    const std::string m = normalize_model_name(dipolemodel);
+    return m == "gbw(old)" || m == "gbw(new)" || m == "gbw";
+}
+
+double gbw_lambda_for_model(const std::string& dipolemodel)
+{
+    const std::string m = normalize_model_name(dipolemodel);
+    if (m == "gbw(old)" || m == "gbw") {
+        return gbw.lambda;
+    }
+    if (m == "gbw(new)") {
+        return gbw_10.lambda;
+    }
+    return gbw_10.lambda;
+}
+
+double clamp_lambda(double lambda)
+{
+    return std::clamp(lambda, lambda_min, lambda_max);
+}
+
+bool is_valid_lambda(double lambda)
+{
+    return std::isfinite(lambda) && lambda > 0.0;
+}
+
+// λ_e = ∂ ln|A| / ∂ ln(1/x), com y = ln(1/x) = -ln(x).
+double lambda_from_amplitude(double x, double Delta, double Q2, const Meson& M,
+                             const std::string& dipolemodel)
+{
+    double err = 0.0;
+    const double x_eval = (x > lambda_boundary_x) ? lambda_boundary_x : x;
+    const double y = -std::log(x_eval);
+
+    auto f_lnA = [&](double y_var) {
+        return lnA(y_var, Delta, Q2, M, dipolemodel);
+    };
+
+    return dfridr(f_lnA, y, lambda_derivative_step, err);
+}
+
+} // namespace
+
+double lnA(double y, double Delta, double Q2, const Meson& M,
            std::string dipolemodel)
 {
-    double x = std::exp(-y);
-
-    double amp = get_amplitude_p(x, Delta, Q2, M, dipolemodel);
-
+    const double x = std::exp(-y);
+    const double amp = get_amplitude_p(x, Delta, Q2, M, dipolemodel);
 
     if (amp == 0.0) {
         std::cerr << "Amp = 0 em x=" << x << std::endl;
@@ -34,72 +101,74 @@ double lnA(double y,double Delta, double Q2, const Meson& M,
     return std::log(std::abs(amp));
 }
 
-
-// -------------- lamnda_e --------------
-// pipeline é a seguinte: calcula sua amplitude, usa ela para o lambda e depois o lambda para o Rg e beta, que são os fatores de correção
-// fica mais leve calculando o lambda uma vez só.
-double calculate_lambda(double x, double Delta, double Q2, const Meson& M, std::string dipolemodel)
+double calculate_lambda(double x, double Delta, double Q2, const Meson& M,
+                        std::string dipolemodel)
 {
-    const double h = 1e-4;
-    double err;
-    double y = -std::log(x);
-
-
-    auto f_lnA = [&](double y_var) {
-        return lnA(y_var, Delta, Q2, M, dipolemodel);
-    };
-
-    double dlnA_dy = dfridr(f_lnA, y, h, err);
-
-    if (x > 1e-2) {
-        double y_b = -log(1e-2);
-        double dlnA_dy_b = dfridr(f_lnA, y_b, h, err);
-        
-        return dlnA_dy_b; // para x > 1e-2, usa o valor de lambda em x=1e-2
+    if (uses_fortran_fixed_lambda(dipolemodel)) {
+        return lambda_fortran_bcgc;
     }
 
-    return dlnA_dy;
+    const double lambda_amp = lambda_from_amplitude(x, Delta, Q2, M, dipolemodel);
+    if (is_valid_lambda(lambda_amp)) {
+        return clamp_lambda(lambda_amp);
+    }
+
+    if (has_gbw_lambda(dipolemodel)) {
+        return clamp_lambda(gbw_lambda_for_model(dipolemodel));
+    }
+
+    std::cerr << "AVISO: lambda_e invalido para modelo " << dipolemodel
+              << "; usando fallback 0.28.\n";
+    return lambda_fortran_bcgc;
 }
 
-// ----------------- fator de correção Rg skeweness ----------------
-
-double RG(double x, double Q2, double lambda_e, const Meson& M)
+// R_g(λ) = 2^(2λ+3) / sqrt(π) * Γ(λ+5/2) / Γ(λ+4)  [Shuvaev; Gonçalves et al.]
+double RG(double /*x*/, double /*Q2*/, double lambda_e, const Meson& /*M*/)
 {
-    return std::pow(2.0, 2.0*lambda_e + 3.0) * tgamma(lambda_e + 2.5) 
-                         / (sqrt(M_PI) * tgamma(lambda_e + 4.0));
+    const double lam = clamp_lambda(lambda_e);
+    return std::pow(2.0, 2.0 * lam + 3.0) * tgamma(lam + 2.5)
+         / (std::sqrt(M_PI) * tgamma(lam + 4.0));
 }
 
-
-double beta(double x, double Q2, double lambda_e, const Meson& M){
-    return std::tan(M_PI * lambda_e / 2.0);
+// Re A / Im A ≈ tan(π λ_e / 2) via relações de dispersão [Machado EPJC 2009].
+double beta(double /*x*/, double /*Q2*/, double lambda_e, const Meson& /*M*/)
+{
+    const double lam = clamp_lambda(lambda_e);
+    return std::tan(M_PI * lam / 2.0);
 }
 
-// ----------------- função pra printar os valores de lambda_e e Rg ----------------
-void debug_correc(void)
+SkewCorrection compute_skew_correction(double x, double Delta, double Q2,
+                                       const Meson& M, const std::string& dipolemodel)
+{
+    SkewCorrection out;
+    out.lambda_e = calculate_lambda(x, Delta, Q2, M, dipolemodel);
+    out.Rg       = RG(x, Q2, out.lambda_e, M);
+    out.beta     = beta(x, Q2, out.lambda_e, M);
+    out.factor   = out.Rg * out.Rg * (1.0 + out.beta * out.beta);
+    return out;
+}
+
+void debug_correc(std::string model)
 {
     double x = 1e-4;
     double Q2 = 0.0;
     const Meson& M = Jpsi_GLC_GBW;
 
     for (int i = 0; i < 120; ++i) {
-        double xi = x + i * 1e-4; // varre x de 1e-4 a 1e-2
-        double amp = get_amplitude_p(xi, 0.0, Q2, M, "GBW");
-        double lambda_e = calculate_lambda(xi, 0.0, Q2, M, "GBW");
-        double Rg = RG(xi, Q2, lambda_e, M);
-        double beta_val = beta(xi, Q2, lambda_e, M);
-
-        std::cout << "x: " << xi << "  lambda_e: " << lambda_e << "  Rg: " << Rg << "  beta: " << beta_val << std::endl;
+        const double xi = x + i * 1e-4;
+        const auto corr = compute_skew_correction(xi, 0.0, Q2, M, model);
+        std::cout << "x: " << xi
+                  << "  lambda_e: " << corr.lambda_e
+                  << "  Rg: " << corr.Rg
+                  << "  beta: " << corr.beta
+                  << "  factor: " << corr.factor << std::endl;
     }
 }
 
-
-// --------------- correção não perturbativa para o phi --------------
-
-double f_c(double r,  double B, double omega, double R)
+double f_c(double r, double B, double omega, double R)
 {
-    //[R]  = GeV^-1
-    double omega2 = omega * omega;
-    double fc_num = 1.0 + B * std::exp(-omega2*(r - R)*(r - R));
-    double fc_den = 1.0 + B * std::exp(-omega2*R*R);
+    const double omega2 = omega * omega;
+    const double fc_num = 1.0 + B * std::exp(-omega2 * (r - R) * (r - R));
+    const double fc_den = 1.0 + B * std::exp(-omega2 * R * R);
     return fc_num / fc_den;
 }
