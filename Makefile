@@ -21,17 +21,22 @@ CXXFLAGS = -O3 -std=c++20 -fopenmp -Wno-deprecated-declarations \
            $(LHAPDF_CFLAGS)
 #           $(ROOT_INC)
 
-LDFLAGS = $(PYTHON_LIB) $(ROOT_LIB)  $(LHAPDF_LIBS)
+LDFLAGS = $(PYTHON_LIB) $(LHAPDF_LIBS) $(BOOST_LIBS) #$(ROOT_LIB) 
 
 SRCS = libraries/mantysaari/dipoleamplitude.cpp \
        libraries/mantysaari/dglap_cpp/AlphaStrong.cpp \
        libraries/mantysaari/dglap_cpp/EvolutionLO_nocoupling.cpp \
        main.cpp \
        other/integration.cpp \
-       other/plot.cpp \
+       other/plots/plot_sigma.cpp \
+       other/plots/plot_io.cpp \
+       other/plots/plot_other.cpp \
+       other/plots/plot_rapidity.cpp \
        other/utils.cpp \
        other/ctes.cpp \
        dipole_amplitudes/GBW.cpp \
+       dipole_amplitudes/IIM.cpp \
+       dipole_amplitudes/bCGC.cpp \
        dipole_amplitudes/ipsat.cpp \
        dipole_amplitudes/LHAPDF.cpp \
        other/correcs.cpp \
