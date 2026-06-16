@@ -7,6 +7,7 @@
 #include "../calculations/sigma.hpp"
 #include "../other/utils.hpp"
 #include "../calculations/nuclear.hpp"
+#include "../other/correcs.hpp"
 
 #include "../other/plots/plot_sigma.hpp"
 #include "../other/plots/plot_rapidity.hpp"
@@ -234,8 +235,8 @@ for (int i = 0; i < Nw; ++i) {
     (Nucleo1.name == Nucleo2.name)? tableA: get_TA_table(Nucleo2);
     
 
-    const int Ny = 100;
-    double ymax = std::log(sqrt_s / M_GLC.MV);
+    const int Ny = 25;
+    double ymax = 4.0;//std::log(sqrt_s / M_GLC.MV);
 
     int Ntot = 2*Ny + 1;
 
@@ -249,6 +250,7 @@ for (int i = 0; i <= 2*Ny; ++i)
 
     double dsdy_GLC, dsdy_BG;
 
+
     if (Nucleo1.name == Nucleo2.name)
     {
         dsdy_GLC = gamma_A::d_sigma_dy_AA(y, sqrt_s, Q2, M_GLC, model, tableA, Nucleo1) * gev2_to_mb;
@@ -259,6 +261,7 @@ for (int i = 0; i <= 2*Ny; ++i)
         dsdy_GLC = gamma_A::d_sigma_dy_AB(y, sqrt_s, Q2, M_GLC, model, tableA, tableB, Nucleo1, Nucleo2) * gev2_to_mb;
         dsdy_BG  = gamma_A::d_sigma_dy_AB(y, sqrt_s, Q2, M_BG,  model, tableA, tableB, Nucleo1, Nucleo2) * gev2_to_mb;
     }
+    std::cout << "Calculado dσ/dy ="<< dsdy_GLC << " ," << dsdy_BG << " para y = " << y << "...\n";
 
     int idx = Ny + k;
 
@@ -304,4 +307,26 @@ void create_TA_b_csv(std::string meson)
     for(size_t i=0;i<W.size();++i)
         out << W[i] << "," << TA_GLC[i] << "," << TA_BG[i] << "\n";
     out.close();
+}
+
+void Shadowing_factor_csv()
+{
+    std::vector<double> x = linspace(1e-5, 0.5, 100);
+    std::vector<double> xg_p_vals(x.size()), xg_Pb_vals(x.size()), S(x.size());
+
+    for(size_t i = 0; i < x.size(); ++i){
+        xg_p_vals[i] = xg_p(x[i], 1.0);
+        xg_Pb_vals[i] = xg_Pb(x[i], 1.0);
+        S[i] = S_Pb(x[i], 1.0);
+        cout<< "x = " << x[i] << ", xg_p = " << xg_p_vals[i] << ", xg_Pb = " 
+        << xg_Pb_vals[i] << ", S_Pb = " << S[i] << endl;
+    }
+
+    cout << "Plotando xg do proton\n";
+    plot_XY(x, xg_p_vals, "x", "xg_p(x)", "Gluon PDF do próton");
+    cout << "Plotando xg do chumbo\n";
+
+    plot_XY(x, xg_Pb_vals, "x", "xg_Pb(x)", "Gluon PDF do Pb");
+    cout << "Plotando fator de shadowing\n";
+    plot_XY(x, S, "x", "S_Pb(x)", "Fator de shadowing S_Pb(x)");
 }

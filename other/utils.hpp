@@ -142,4 +142,6 @@ std::vector<double> W_space(double N, const Meson& M);
 
 double low_x_factor(double x, double exp = 5.0);
 
+std::vector<double> linspace(double start, double end, int num);
+
 #endif

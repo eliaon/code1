@@ -15,6 +15,7 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <LHAPDF/LHAPDF.h>
 
 
 using namespace MZ_ipsat;
@@ -172,3 +173,46 @@ double f_c(double r, double B, double omega, double R)
     const double fc_den = 1.0 + B * std::exp(-omega2 * R * R);
     return fc_num / fc_den;
 }
+
+
+namespace {
+    LHAPDF::PDF* & nnpdf_proton_pdf() {
+        thread_local LHAPDF::PDF* pdf = LHAPDF::mkPDF("NNPDF30_nlo_as_0118", 0);
+        return pdf;
+    }
+
+    LHAPDF::PDF* & nnpdf_pb_pdf() {
+        thread_local LHAPDF::PDF* pdf = LHAPDF::mkPDF("nNNPDF30_nlo_as_0118_A208_Z82", 0);
+        return pdf;
+    }
+}
+
+double xg_p(double x, double Q) {
+    return nnpdf_proton_pdf()->xfxQ(21, x, Q); // Retorna xg(x, Q^2) = x * g(x, Q^
+}
+
+double xg_Pb(double x, double Q){
+    return nnpdf_pb_pdf()->xfxQ(21, x, Q); 
+}
+
+// ------- shadowing ----------------
+
+double S_Pb(double x, double Q){
+    double xg_p_val = xg_p(x, Q);
+    double xg_Pb_val = xg_Pb(x, Q);
+
+    return xg_Pb_val / (xg_p_val);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

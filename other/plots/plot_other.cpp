@@ -209,15 +209,15 @@ void plot_xf_multiQ2()
     LHAPDF::setPaths("/home/elian/local/share/LHAPDF");
 
 
-    std::string pdf_name = "CT14lo";
+    std::string pdf_name = "NNPDF30_nlo_as_0118";
 
-    LHAnPDF lhapdf("CT14lo");
-    const std::vector<double> Q2_values = {1.0, 10.0, 100.0};
+    LHAnPDF lhapdf("NNPDF30_nlo_as_0118");
+    const std::vector<double> Q2_values = {4.0};
 
     namespace fs = std::filesystem;
     fs::create_directories("out/plots/xf");
 
-    std::vector<int> flavors = {1, 2, 3, 4, 21}; //  // 21 para xg, 1: xd, 2: xu, 3: xs, 4: xc, 5: xb, 6: xt
+    std::vector<int> flavors = {21}; //  // 21 para xg, 1: xd, 2: xu, 3: xs, 4: xc, 5: xb, 6: xt
     
 std::string pyfile = "out/plots/xf/plot_xf.py";
 std::ofstream py(pyfile);
@@ -538,5 +538,28 @@ plt::show();
 
 
 
+void plot_XY(std::vector<double> x, std::vector<double> y, std::string xlabel, std::string ylabel, std::string title)
+{
+    std::cout << "plot_XY: x.size() = " << x.size() << ", y.size() = " << y.size() << std::endl;
+    plt::figure_size(800,600);
+    plt::plot(x, y, {{"label","Dados"}});
 
+    std::cout << "Iniciando pyrun...\n";
+    PyRun_SimpleString(
+        "import matplotlib.pyplot as plt\n"
+        "plt.gca().set_xscale('log')\n"
+    );
+
+    plt::xlabel(xlabel);
+    plt::ylabel(ylabel);
+    plt::title(title);
+    plt::legend();
+    plt::grid(true);
+
+    std::string out =
+        "out/plots/other/" + title + "_" + timestamp() + ".pdf";
+
+    plt::save(out);
+    plt::show();
+}
 

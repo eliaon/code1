@@ -15,6 +15,7 @@ namespace CSV {
     void rapidez_AA(double sqrt_s, std::string model, Nucleus &Nucleo1, Nucleus& Nucleo2);
 
 }
+void Shadowing_factor_csv();
 
 
 

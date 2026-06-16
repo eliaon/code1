@@ -33,4 +33,8 @@ void debug_correc(std::string model);
 
 double f_c(double r, double B, double omega, double R = 6.8);
 
+double xg_p(double x, double Q);
+double xg_Pb(double x, double Q);
+double S_Pb(double x, double Q);
+
 #endif // CORRECS_H

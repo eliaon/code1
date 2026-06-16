@@ -14,6 +14,7 @@
 
 
 #include "ctes.hpp"
+#include "correcs.hpp"
 #include "utils.hpp"
 #include "integration.hpp"
 
@@ -619,8 +620,10 @@ double get_dipolo_p(double r, double x, double Delta, std::string modelo)
 
     }else if(modelo == "IIM_RS" || modelo == "iim_rs"){
         return IIM::sigma_qq(r, x, IIM_RS);
-    }else{
-        std::cerr << "Modelo desconhecido ou não implementado:" << modelo <<std::endl;
+    }else if(modelo == "GBW_Shadowing"){
+        return GBW::sigma_qq_p(r, x, gbw_10) * S_Pb(x, 1.0);}
+    else {
+        std::cerr << "Modelo desconhecido ou não implementado (get_dipolo_p):" << modelo <<std::endl;
         return 0.0;
     }
 }
@@ -678,3 +681,17 @@ double low_x_factor(double x, double exp)
 
 
 
+std::vector<double> linspace(double start, double end, int num) {
+    std::vector<double> result;
+    if (num == 0) return result;
+    if (num == 1) {
+        result.push_back(start);
+        return result;
+    }
+
+    double delta = (end - start) / (num - 1);
+    for (int i = 0; i < num; ++i) {
+        result.push_back(start + delta * i);
+    }
+    return result;
+}

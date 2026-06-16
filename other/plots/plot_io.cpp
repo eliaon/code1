@@ -223,7 +223,9 @@ void read_csv(
     std::string line;
 
     std::getline(file, line); // header
-    
+
+    const double MIN_PLOT_VALUE = 1e-8;  // Threshold to avoid matplotlib numerical issues
+
     while (std::getline(file, line))
     {
         if(line.empty()) continue;
@@ -236,9 +238,23 @@ void read_csv(
         if (!std::getline(ss, c, ',')) continue;
 
         try {
-            x.push_back(std::stod(a));
-            glc.push_back(std::stod(b));
-            bg.push_back(std::stod(c));
+            double x_val = std::stod(a);
+            double glc_val = std::stod(b);
+            double bg_val = std::stod(c);
+
+            // Filter out unreasonably small values that cause matplotlib-cpp issues
+            if (std::abs(glc_val) < MIN_PLOT_VALUE) glc_val = MIN_PLOT_VALUE;
+            if (std::abs(bg_val) < MIN_PLOT_VALUE) bg_val = MIN_PLOT_VALUE;
+
+            // Check for NaN/Inf
+            if (!std::isfinite(x_val) || !std::isfinite(glc_val) || !std::isfinite(bg_val)) {
+                std::cerr << "Warning: Skipping line with NaN/Inf: " << line << std::endl;
+                continue;
+            }
+
+            x.push_back(x_val);
+            glc.push_back(glc_val);
+            bg.push_back(bg_val);
         }
         catch (...) {
             // ignora linha mal formatada
@@ -259,6 +275,11 @@ void read_rapidity_hepdata(
     std::vector<double>& err)
 {
     std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Error: Cannot open file: " << filename << std::endl;
+        return;
+    }
+
     std::string line;
 
     while (std::getline(file, line))
@@ -303,4 +324,7 @@ void read_rapidity_hepdata(
         dsdy.push_back(sigma);
         err.push_back(error);
     }
+
+    file.close();
+    std::cout << "read_rapidity_hepdata: loaded " << y.size() << " points from " << filename << std::endl;
 }

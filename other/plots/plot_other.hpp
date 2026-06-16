@@ -23,7 +23,7 @@ void plot_N_multi(
 
 void plot_N_models(const std::vector<std::pair<std::string,std::string>>& files, double x);
 
-
+void plot_XY(std::vector<double> x, std::vector<double> y, std::string xlabel, std::string ylabel, std::string title);
 
 
 
