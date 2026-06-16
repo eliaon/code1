@@ -9,9 +9,6 @@
 #include "../calculations/nuclear.hpp"
 #include "../other/correcs.hpp"
 
-#include "../other/plots/plot_sigma.hpp"
-#include "../other/plots/plot_rapidity.hpp"
-#include "../other/plots/plot_other.hpp"
 
 
 
@@ -34,7 +31,7 @@ namespace CSV {
             
             filenames.push_back(filename);
         }
-    plot_N_multi(filenames, x, model);
+    //plot_N_multi(filenames, x, model);
     }
 
     void sigma_gamma_p(std::string model)
@@ -112,7 +109,7 @@ namespace CSV {
     std::cout << "Arquivo CSV: " << filename_csv << "\n";
     std::cout << "Arquivo DAT: " << filename_dat << "\n";
 
-    plot_sigma(M_GLC.meson, filename_csv, model);
+    //plot_sigma(M_GLC.meson, filename_csv, model);
 }
 void dsigma_dt_csv(std::string model)
 {
@@ -150,7 +147,7 @@ void dsigma_dt_csv(std::string model)
     fout.close();
     std::cout << "Arquivo '" << filename << "' gerado." << std::endl;
 
-    plot_dsigma_dt(M_GLC.meson);
+    //plot_dsigma_dt(M_GLC.meson);
 }
 
 
@@ -208,7 +205,7 @@ for (int i = 0; i < Nw; ++i) {
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     std::cout << "Tempo de execução: " << duration << " ms" << std::endl;
     std::cout << "Arquivo '" << path << "'(csv e dat) gerado em " << duration << " ms" << std::endl;
-    plot_sigma_gammaA(M_GLC.meson, filename_csv, model, Nucleo);
+    //plot_sigma_gammaA(M_GLC.meson, filename_csv, model, Nucleo);
 }
 
 
@@ -261,7 +258,6 @@ for (int i = 0; i <= 2*Ny; ++i)
         dsdy_GLC = gamma_A::d_sigma_dy_AB(y, sqrt_s, Q2, M_GLC, model, tableA, tableB, Nucleo1, Nucleo2) * gev2_to_mb;
         dsdy_BG  = gamma_A::d_sigma_dy_AB(y, sqrt_s, Q2, M_BG,  model, tableA, tableB, Nucleo1, Nucleo2) * gev2_to_mb;
     }
-    std::cout << "Calculado dσ/dy ="<< dsdy_GLC << " ," << dsdy_BG << " para y = " << y << "...\n";
 
     int idx = Ny + k;
 
@@ -276,9 +272,10 @@ for (int i = 0; i <= 2*Ny; ++i)
     std::ofstream fout_dat(filename_dat);
     fout_dat << "#y d_sigma_dy_GLC d_sigma_dy_BG\n";
 
-
+std::cout << "y (rapidez), d_sigma_dy_GLC (mb), d_sigma_dy_BG (mb)\n";
     for (int i = 0; i < Ntot; ++i)
     {
+        std::cout << Y[i] << " " << GLC[i] << " " << BG[i] << "\n";
         fout_csv << Y[i] << "," << GLC[i] << "," << BG[i] << "\n";
 
         fout_dat << Y[i] << " " << GLC[i] << " " << BG[i] << "\n";
@@ -288,11 +285,6 @@ for (int i = 0; i <= 2*Ny; ++i)
     fout_dat.close();
 
     std::cout << "Arquivo '" << path << "'(csv e dat) gerados.\n";
-
-    plot_rapidez(filename_csv, model, M_GLC.meson, Nucleo1.name+Nucleo2.name, sqrt_s);
-
-    std::cout << "Plot gerado para " << M_GLC.meson << " para a colisão " <<Nucleo1.name << Nucleo2.name 
-                <<" a "<< sqrt_s_str <<" TeV.\n";
 }
 }
 
@@ -304,8 +296,10 @@ void create_TA_b_csv(std::string meson)
 
     std::ofstream out("out/csv/other/" + meson + "_TA_b_processed.csv");
     out << "W,TA_GLC,TA_BG\n";
-    for(size_t i=0;i<W.size();++i)
+    for(size_t i=0;i<W.size();++i){
         out << W[i] << "," << TA_GLC[i] << "," << TA_BG[i] << "\n";
+        std::cout << W[i] << "," << TA_GLC[i] << "," << TA_BG[i] << "\n";
+    }
     out.close();
 }
 
@@ -321,12 +315,5 @@ void Shadowing_factor_csv()
         cout<< "x = " << x[i] << ", xg_p = " << xg_p_vals[i] << ", xg_Pb = " 
         << xg_Pb_vals[i] << ", S_Pb = " << S[i] << endl;
     }
-
-    cout << "Plotando xg do proton\n";
-    plot_XY(x, xg_p_vals, "x", "xg_p(x)", "Gluon PDF do próton");
-    cout << "Plotando xg do chumbo\n";
-
-    plot_XY(x, xg_Pb_vals, "x", "xg_Pb(x)", "Gluon PDF do Pb");
-    cout << "Plotando fator de shadowing\n";
-    plot_XY(x, S, "x", "S_Pb(x)", "Fator de shadowing S_Pb(x)");
+    
 }

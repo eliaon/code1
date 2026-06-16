@@ -1,11 +1,6 @@
 CXX = g++
 
-# Python
-PYTHON_INC = $(shell python3-config --includes)
-PYTHON_LIB = $(shell python3-config --embed --ldflags)
 
-# NumPy
-NUMPY_INC = $(shell python3 -c "import numpy; print(numpy.get_include())")
 
 # ROOT
 #ROOT_INC  = $(shell root-config --cflags) # liga se for usar ROOT
@@ -16,8 +11,6 @@ LHAPDF_CFLAGS = $(shell lhapdf-config --cflags)
 LHAPDF_LIBS   = $(shell lhapdf-config --libs)
 
 CXXFLAGS = -O3 -std=c++20 -fopenmp -Wno-deprecated-declarations \
-           $(PYTHON_INC) \
-           -I$(NUMPY_INC) \
            $(LHAPDF_CFLAGS)
 #           $(ROOT_INC)
 
@@ -28,10 +21,6 @@ SRCS = libraries/mantysaari/dipoleamplitude.cpp \
        libraries/mantysaari/dglap_cpp/EvolutionLO_nocoupling.cpp \
        main.cpp \
        other/integration.cpp \
-       other/plots/plot_sigma.cpp \
-       other/plots/plot_io.cpp \
-       other/plots/plot_other.cpp \
-       other/plots/plot_rapidity.cpp \
        other/utils.cpp \
        other/ctes.cpp \
        dipole_amplitudes/GBW.cpp \
