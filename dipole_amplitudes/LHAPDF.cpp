@@ -2,7 +2,6 @@
 #include <LHAPDF/LHAPDF.h>
 #include "../other/utils.hpp"
 #include "../other/ctes.hpp"
-#include "../other/plots/plot_other.hpp"
 #include "../other/integration.hpp"
 #include "../calculations/wavefunctions.hpp"
 
@@ -77,12 +76,13 @@ void LHAnPDF::N_csv()
             double N_val = N_p(x, r);
 
             fout << r * CFAC << "," << N_val << "\n"; // r em fm
+            std::cout << r * CFAC << " " << N_val << "\n";
         }
         filenames.push_back(filename);
         std::cout << "Gerado csv para N(r) em x = " << x << ": " << filename << std::endl;
         fout.close();
     }
-    plot_N_multi(filenames, x_values, "LHAPDF - CT14lo");
+    //plot_N_multi(filenames, x_values, "LHAPDF - CT14lo");
 
 }
 
