@@ -21,7 +21,7 @@
 using namespace MZ_ipsat;
 
 double lnA(double y, double Delta, double Q2, const Meson& M,
-           std::string dipolemodel);
+           std::string dipolemodel, bool fc);
 
 namespace {
 
@@ -73,14 +73,14 @@ bool is_valid_lambda(double lambda)
 
 // λ_e = ∂ ln|A| / ∂ ln(1/x), com y = ln(1/x) = -ln(x).
 double lambda_from_amplitude(double x, double Delta, double Q2, const Meson& M,
-                             const std::string& dipolemodel)
+                             const std::string& dipolemodel, bool fc)
 {
     double err = 0.0;
     const double x_eval = (x > lambda_boundary_x) ? lambda_boundary_x : x;
     const double y = -std::log(x_eval);
 
     auto f_lnA = [&](double y_var) {
-        return lnA(y_var, Delta, Q2, M, dipolemodel);
+        return lnA(y_var, Delta, Q2, M, dipolemodel, fc);
     };
 
     return dfridr(f_lnA, y, lambda_derivative_step, err);
@@ -89,10 +89,10 @@ double lambda_from_amplitude(double x, double Delta, double Q2, const Meson& M,
 } // namespace
 
 double lnA(double y, double Delta, double Q2, const Meson& M,
-           std::string dipolemodel)
+           std::string dipolemodel, bool fc)
 {
     const double x = std::exp(-y);
-    const double amp = get_amplitude_p(x, Delta, Q2, M, dipolemodel);
+    const double amp = get_amplitude_p(x, Delta, Q2, M, dipolemodel, fc);
 
     if (amp == 0.0) {
         std::cerr << "Amp = 0 em x=" << x << std::endl;
@@ -103,19 +103,13 @@ double lnA(double y, double Delta, double Q2, const Meson& M,
 }
 
 double calculate_lambda(double x, double Delta, double Q2, const Meson& M,
-                        std::string dipolemodel)
+                        std::string dipolemodel, bool fc)
 {
-    if (uses_fortran_fixed_lambda(dipolemodel)) {
-        return lambda_fortran_bcgc;
-    }
+    
 
-    const double lambda_amp = lambda_from_amplitude(x, Delta, Q2, M, dipolemodel);
+    const double lambda_amp = lambda_from_amplitude(x, Delta, Q2, M, dipolemodel, fc);
     if (is_valid_lambda(lambda_amp)) {
         return clamp_lambda(lambda_amp);
-    }
-
-    if (has_gbw_lambda(dipolemodel)) {
-        return clamp_lambda(gbw_lambda_for_model(dipolemodel));
     }
 
     std::cerr << "AVISO: lambda_e invalido para modelo " << dipolemodel
@@ -139,17 +133,17 @@ double beta(double /*x*/, double /*Q2*/, double lambda_e, const Meson& /*M*/)
 }
 
 SkewCorrection compute_skew_correction(double x, double Delta, double Q2,
-                                       const Meson& M, const std::string& dipolemodel)
+                                       const Meson& M, const std::string& dipolemodel, bool fc)
 {
     SkewCorrection out;
-    out.lambda_e = calculate_lambda(x, Delta, Q2, M, dipolemodel);
+    out.lambda_e = calculate_lambda(x, Delta, Q2, M, dipolemodel, fc);
     out.Rg       = RG(x, Q2, out.lambda_e, M);
     out.beta     = beta(x, Q2, out.lambda_e, M);
     out.factor   = out.Rg * out.Rg * (1.0 + out.beta * out.beta);
     return out;
 }
 
-void debug_correc(std::string model)
+void debug_correc(std::string model, bool fc)
 {
     double x = 1e-4;
     double Q2 = 0.0;
@@ -157,7 +151,7 @@ void debug_correc(std::string model)
 
     for (int i = 0; i < 120; ++i) {
         const double xi = x + i * 1e-4;
-        const auto corr = compute_skew_correction(xi, 0.0, Q2, M, model);
+        const auto corr = compute_skew_correction(xi, 0.0, Q2, M, model, fc);
         std::cout << "x: " << xi
                   << "  lambda_e: " << corr.lambda_e
                   << "  Rg: " << corr.Rg

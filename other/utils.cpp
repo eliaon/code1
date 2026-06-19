@@ -545,35 +545,36 @@ std::string flavorName(int flavor) {
 
 
 
-double get_amplitude_p(double x, double Delta,double Q2, const Meson& M, std::string modelo)
+double get_amplitude_p(double x, double Delta,double Q2, const Meson& M, std::string modelo, bool fc)
     {
         if (modelo == "GBW(old)") {
-            double amp = GBW::amplitude_p(x, Q2, M, gbw);
+            double amp = GBW::amplitude_p(x, Q2, M, gbw, fc);
           //  cout <<"x = " << x << " Amplitude GBW: " << amp << std::endl;
             return amp;
-        } else if (modelo == "GBW(new)") {
-            double amp = GBW::amplitude_p(x, Q2, M, gbw_10);
+        } else if (modelo == "GBW(new)" || modelo == "GBW_Shadowing") {
+            double amp = GBW::amplitude_p(x, Q2, M, gbw_10, fc);
           //  cout <<"x = " << x << " Amplitude GBW: " << amp << std::endl;
             return amp;
         }
         else if (modelo == "LHAnPDF") {
-            return ct14lo_pdf().amplitude_p(x, Q2, M);
+            return ct14lo_pdf().amplitude_p(x, Q2, M, fc);
         }
         else if(modelo == "IPSAT") {
-            return IPSAT::amplitude_p(x, Delta, Q2, M);
+            return IPSAT::amplitude_p(x, Delta, Q2, M, fc);
         }
         else if(modelo == "bCGC" || modelo == "BCGC" || modelo == "bcgc") {
-            return bCGC::amplitude_p(x, Delta, Q2, M);
+            return bCGC::amplitude_p(x, Delta, Q2, M, fc);
         } else if(modelo == "IIM_S" || modelo == "iim_s"){
-        return IIM::amplitude_p(x, Q2, M, IIM_S);
+        return IIM::amplitude_p(x, Q2, M, IIM_S, fc);
 
         }else if(modelo == "IIM_RS" || modelo == "iim_rs"){
-        return IIM::amplitude_p(x, Q2, M, IIM_RS);
+        return IIM::amplitude_p(x, Q2, M, IIM_RS, fc);
         }else {
             std::cerr << "Modelo desconhecido: " << modelo << std::endl;
             return 0.0;
         }
     }
+
 
 double get_Np(double r, double x, std::string modelo, double b)
 {
@@ -621,7 +622,7 @@ double get_dipolo_p(double r, double x, double Delta, std::string modelo)
     }else if(modelo == "IIM_RS" || modelo == "iim_rs"){
         return IIM::sigma_qq(r, x, IIM_RS);
     }else if(modelo == "GBW_Shadowing"){
-        return GBW::sigma_qq_p(r, x, gbw_10) * S_Pb(x, 1.0);}
+        return GBW::sigma_qq_p(r, x, gbw_10) * S_Pb(x, 1.019);}
     else {
         std::cerr << "Modelo desconhecido ou não implementado (get_dipolo_p):" << modelo <<std::endl;
         return 0.0;
@@ -637,16 +638,18 @@ string N_file(double x, std::string modelo)
 
     const int Npoints = 5000;
     double rmin = 1e-4, rmax = 10.0;
+    std::vector<double> r_values = linspace(rmin, rmax, Npoints);
 
     for (int i = 0; i < Npoints; ++i)
     {
         double frac = (double)i / (Npoints - 1);
-        double r = rmin * std::pow(rmax / rmin, frac)*CFAC; // escala log
-        double N_val = get_Np(r, x, modelo); // exemplo para x=1e-4 e x0=1e-2
-        fout << r/CFAC << "," << N_val << "\n"; // converte r para fm
+        double N_val = get_Np(r_values[i], x, modelo); // exemplo para x=1e-4 e x0=1e-2
+        fout << r_values[i] << "," << N_val << "\n"; // converte r para fm
     }
     return filename;
 }
+
+
 
 std::vector<double> W_space(double N, const Meson& M)
 {
@@ -679,7 +682,33 @@ double low_x_factor(double x, double exp)
 
 
 
+std::vector<double> logspace(double xmin, double xmax, int N)
+{
+    if (N <= 0)
+        throw std::invalid_argument("logspace: N deve ser positivo");
 
+    if (xmin <= 0.0 || xmax <= 0.0)
+        throw std::invalid_argument("logspace: xmin e xmax devem ser > 0");
+
+    std::vector<double> x(N);
+
+    if (N == 1)
+    {
+        x[0] = xmin;
+        return x;
+    }
+
+    double logmin = std::log10(xmin);
+    double logmax = std::log10(xmax);
+
+    for (int i = 0; i < N; ++i)
+    {
+        double t = static_cast<double>(i) / (N - 1);
+        x[i] = std::pow(10.0, logmin + t * (logmax - logmin));
+    }
+
+    return x;
+}
 
 std::vector<double> linspace(double start, double end, int num) {
     std::vector<double> result;

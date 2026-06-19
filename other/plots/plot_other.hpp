@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include "../utils.hpp"
 
 void plot_TA_b();
 
@@ -23,8 +24,13 @@ void plot_N_multi(
 
 void plot_N_models(const std::vector<std::pair<std::string,std::string>>& files, double x);
 
-void plot_XY(std::vector<double> x, std::vector<double> y, std::string xlabel, std::string ylabel, std::string title);
-
+void plot_XY(const std::vector<double>& x,
+             const std::vector<double>& y,
+             const std::string& xlabel,
+             const std::string& ylabel,
+             const std::string& title);
+             
+void plot_overlap_models(std::vector<std::pair<std::string, std::string>>& files, const Meson& M, bool fc);
 
 
 #endif

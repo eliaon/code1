@@ -130,7 +130,7 @@ void read_rapidity_hepdata(
     std::vector<double>& err);
 
 
-double get_amplitude_p(double x, double Delta, double Q2, const Meson& M, std::string modelo);
+double get_amplitude_p(double x, double Delta, double Q2, const Meson& M, std::string modelo, bool fc);
 
 double get_Np(double r, double x, std::string modelo, double b= 2.0);
 
@@ -143,5 +143,6 @@ std::vector<double> W_space(double N, const Meson& M);
 double low_x_factor(double x, double exp = 5.0);
 
 std::vector<double> linspace(double start, double end, int num);
+std::vector<double> logspace(double xmin, double xmax, int N);
 
 #endif

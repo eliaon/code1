@@ -134,9 +134,14 @@ double psi_Vpsi_L(double z, double r, double Q2, const Meson& M)
 
 
 // ---------------- overlap integrado em z ----------------
-double overlap_r(double r, double Q2, const Meson& M) {
-    auto fz = [r, Q2, &M](double z) {
+double overlap_r(double r, double Q2, const Meson& M, bool fc) {
+    auto fz = [&](double z) {
+        if(fc == true){
+            double sqrt_fc = std::sqrt(f_c(r, B_fc, omega_fc));
+            return sqrt_fc * psi_Vpsi_T(z, r, Q2, M); //+ psi_Vpsi_L(z, r, Q2, M);
+        } else{
         return psi_Vpsi_T(z, r, Q2, M); //+ psi_Vpsi_L(z, r, Q2, M);
+        }
     };
     return integrate_simpson( fz, zmin, zmax, Nz);
 }

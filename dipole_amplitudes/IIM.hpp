@@ -24,7 +24,7 @@ namespace IIM {
 
     double sigma_qq(double r, double x, const param_IIM& param);
 
-    double amplitude_p(double x, double Q2, const Meson& M, param_IIM param);
+    double amplitude_p(double x, double Q2, const Meson& M, param_IIM param, bool fc = false);
 
 }
 

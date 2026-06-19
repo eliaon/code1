@@ -28,7 +28,7 @@ public:
 
     void N_csv();
     std::string xf_vs_x(double Q2, int flavor);
-    double amplitude_p(double x, double Q2, const Meson& M);
+    double amplitude_p(double x, double Q2, const Meson& M, bool fc = false);
 
     void set_sigma0(double val);
     void set_C(double val);

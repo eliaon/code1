@@ -18,9 +18,7 @@ namespace IPSAT{
 
 double sigma_qq_p(double r, double x, double Delta, MZ_ipsat::DipoleAmplitude& dipole);
 
-double amplitude_p(double x, double Delta, double Q2, const Meson& M,
-                 int Nr = 600, int Nz = 200,
-                 double rmin = 1e-4, double rmax = 10.0);
+double amplitude_p(double x, double Delta, double Q2, const Meson& M, bool fc = false);
 };
 
 #endif //IPSAT_H

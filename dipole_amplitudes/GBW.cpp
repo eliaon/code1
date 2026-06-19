@@ -55,10 +55,10 @@ double sigma_qq_p(double r, double x, parametros_GBW params)
 
 
 double amplitude_p(double x, double Q2, const Meson& M,
-                const parametros_GBW& gbw)
+                const parametros_GBW& gbw, bool fc)
 {
-    auto amp_r = [x, Q2, M, gbw](double r) {
-        double Ov = overlap_r(r, Q2, M);
+    auto amp_r = [x, Q2, M, gbw, fc](double r) {
+        double Ov = overlap_r(r, Q2, M, fc);
         double sigma_dip = sigma_qq_p(r, x, gbw);
         //double sqrt_fc = std::sqrt(f_c(r, -0.979599, 0.403569));
         return 2.0 * M_PI * r * Ov * sigma_dip; //* sqrt_fc; // r de d²r = 2π r dr
@@ -73,7 +73,7 @@ double amplitude_model(double x,  double B, double omega,
                         const Meson& M, double Q2)
 {
     auto amp_r = [x, Q2, M, B, omega](double r) {
-        double Ov = overlap_r(r, Q2, M);
+        double Ov = overlap_r(r, Q2, M, false);
         double sigma_qq = GBW::sigma_qq_p(r, x, gbw);
         double sqrt_fc = std::sqrt(f_c(r, B, omega));
         return  2*M_PI *r * Ov * sigma_qq * sqrt_fc; // r de d²r = 2π r dr
@@ -87,7 +87,7 @@ double sigma_model(double x, double B, double omega, const Meson& M, double Q2)
      parametros_GBW params = gbw; // ou escolha outro conjunto de parâmetros se desejar
      double amp = GBW::amplitude_model(x, B, omega, M, Q2);
      double B_slope_val = B_slope(x, Q2, M);
-     const SkewCorrection skew = compute_skew_correction(x, 0.0, Q2, M, "GBW(old)");
+     const SkewCorrection skew = compute_skew_correction(x, 0.0, Q2, M, "GBW(old)", false);
      double sigma_gev = skew.factor * (amp * amp) / (16.0 * M_PI * B_slope_val);
      double sigma_nb = sigma_gev * GeV2_to_nb;
      return sigma_nb;

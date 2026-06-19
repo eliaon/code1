@@ -32,7 +32,7 @@ double sigma_qq_p(double r, double x, parametros_GBW params);
 
 
 double amplitude_p(double x, double Q2, const Meson& M,
-                const parametros_GBW& gbw);
+                const parametros_GBW& gbw, bool fc = false);
 
 
 double amplitude_model(double x,  double B, double omega,

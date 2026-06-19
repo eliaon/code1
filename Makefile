@@ -22,7 +22,8 @@ CXXFLAGS = -O3 -std=c++20 -fopenmp -Wno-deprecated-declarations \
 #           $(ROOT_INC)
 
 LDFLAGS = $(PYTHON_LIB) $(LHAPDF_LIBS) $(BOOST_LIBS) #$(ROOT_LIB) 
-
+#CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer -g
+#LDFLAGS  += -fsanitize=address
 SRCS = libraries/mantysaari/dipoleamplitude.cpp \
        libraries/mantysaari/dglap_cpp/AlphaStrong.cpp \
        libraries/mantysaari/dglap_cpp/EvolutionLO_nocoupling.cpp \

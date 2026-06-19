@@ -267,7 +267,20 @@ void read_csv(
         throw std::runtime_error("CSV columns size mismatch in: " + filename);
     }
 }
+void write_python_vector(std::ofstream& py,
+                         const std::string& name,
+                         const std::vector<double>& v)
+{
+    py << name << " = [";
 
+    for(size_t i=0;i<v.size();++i)
+    {
+        if(i) py << ",";
+        py << v[i];
+    }
+
+    py << "]\n";
+}
 void read_rapidity_hepdata(
     const std::string& filename,
     std::vector<double>& y,
@@ -327,4 +340,19 @@ void read_rapidity_hepdata(
 
     file.close();
     std::cout << "read_rapidity_hepdata: loaded " << y.size() << " points from " << filename << std::endl;
+}
+
+
+    void letra_slide(std::ofstream& py)
+{
+    py << "plt.rcParams.update({\n"
+          "    'font.size': 20,\n"
+          "    'axes.titlesize': 20,\n"
+          "    'axes.labelsize': 20,\n"
+          "    'xtick.labelsize': 16,\n"
+          "    'ytick.labelsize': 16,\n"
+          "    'legend.fontsize': 20,\n"
+          "    'figure.titlesize': 20,\n"
+          "    'lines.linewidth': 3\n"
+          "})\n\n";
 }

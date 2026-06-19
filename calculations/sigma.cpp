@@ -15,10 +15,10 @@
 
 namespace gamma_p {
 
-    double amplitude_p(double x, double Delta, double Q2, const Meson& M, std::string modelo)
+    double amplitude_p(double x, double Delta, double Q2, const Meson& M, std::string modelo, bool fc)
     {
-        auto amp_r = [x, Delta, Q2, &M, &modelo](double r){
-            double Ov = overlap_r(r, Q2, M);
+        auto amp_r = [x, Delta, Q2, &M, &modelo, fc](double r){
+            double Ov = overlap_r(r, Q2, M, fc);
             double sigma_qq = get_dipolo_p(r, x, Delta, modelo);
             return 2* M_PI * r * Ov * sigma_qq;
         };
@@ -27,31 +27,33 @@ namespace gamma_p {
     }
 
 
-    double sigma(double W, double Q2, const Meson& M, std::string modelo)
+    double sigma(double W, double Q2, const Meson& M, std::string modelo, bool fc)
     {
+        
         double x = W_to_x(W, M);
-        double amp = get_amplitude_p(x, 0.0, Q2, M, modelo);
+        double amp = get_amplitude_p(x, 0.0, Q2, M, modelo, fc);
 
         double B_val = B_slope(x, Q2, M);
-        const SkewCorrection skew = compute_skew_correction(x, 0.0, Q2, M, modelo);
+        const SkewCorrection skew = compute_skew_correction(x, 0.0, Q2, M, modelo, fc);
+        //cout << "x: " << x << ", Q2: " << Q2 << ", Amplitude: " << amp << ", B_slope: " << B_val << ", Skew factor: " << skew.factor << endl;
 
         return skew.factor * (amp * amp) / (16.0 * M_PI * B_val);
     }
 
-    double dsigma_dt(double t, double W, double Q2, const Meson& M, std::string modelo)
+    double dsigma_dt(double t, double W, double Q2, const Meson& M, std::string modelo, bool fc)
     {
         double Delta = std::sqrt(t);
         double x = W_to_x(W, M);
-        double amp = get_amplitude_p(x, Delta, Q2, M, modelo);
-        const SkewCorrection skew = compute_skew_correction(x, Delta, Q2, M, modelo);
+        double amp = get_amplitude_p(x, Delta, Q2, M, modelo, fc);
+        const SkewCorrection skew = compute_skew_correction(x, Delta, Q2, M, modelo, fc);
 
         return (amp * amp) / (16.0 * M_PI) * skew.factor;
     }
 
-    double sigma_integrado(double W, double Q2, const Meson&M, std::string modelo)
+    double sigma_integrado(double W, double Q2, const Meson&M, std::string modelo, bool fc)
     {
         auto ds_dt = [&](double t){
-            return dsigma_dt(t, W, Q2, M, modelo);
+            return dsigma_dt(t, W, Q2, M, modelo, fc);
         };
         return integrate_simpson(ds_dt, tmin, tmax, Nt);
     }
@@ -81,23 +83,22 @@ namespace gamma_A{
     }
 
     double amplitude_A(double x, double b, double Delta, double Q2, const Meson&M,
-                     std::string modelo, Nucleus& Nucleo, const TA_Table& table)
+                     std::string modelo, Nucleus& Nucleo, const TA_Table& table, bool fc)
     {
-        auto amp_r = [x, Q2, b, Delta, modelo, M, &Nucleo, &table](double r) {
-        double sqrt_fc = std::sqrt(f_c(r, -0.979599, 0.403569)); // valores de B e omega fitados no minuit para o proton
-        double Ov = overlap_r(r, Q2, M);
+        auto amp_r = [x, Q2, b, Delta, modelo, M, &Nucleo, &table, fc](double r) {
+        double Ov = overlap_r(r, Q2, M, fc);
         double N_qq = N_qq_A(r, x, b, Delta, modelo, Nucleo, table); 
         //cout << "Overlap = " << Ov << ", sigma_qq = " << sigma_qq << endl;
-        return 2 * M_PI * r * Ov * N_qq * sqrt_fc; // r de d²r = 2π r dr => 2π r * Ov * N_qq para integrar em dr depois
+        return 2 * M_PI * r * Ov * N_qq ;//* sqrt_fc; // r de d²r = 2π r dr => 2π r * Ov * N_qq para integrar em dr depois
     };
     return integrate_simpson(amp_r, rmin, rmax, Nr)/(4 * M_PI);
     }
 
-    double sigma(double W, double Q2, const Meson&M, std::string modelo, const TA_Table& table, Nucleus& Nucleo)
+    double sigma(double W, double Q2, const Meson&M, std::string modelo, const TA_Table& table, Nucleus& Nucleo, bool fc)
     {
         double x = W_to_x(W, M);
         auto sig_b = [&](double b){
-            double amp = amplitude_A(x, b, 0.0, Q2, M, modelo, Nucleo, table);
+            double amp = amplitude_A(x, b, 0.0, Q2, M, modelo, Nucleo, table, fc);
             //cout << "Amplitude A = " << amp << endl;
             double amp2 = amp * amp;
             return 2 * M_PI * b * amp2;
@@ -105,8 +106,8 @@ namespace gamma_A{
     double bmax = table.b_vals.back(); // limite de integração em b
     int nb = table.b_vals.size(); // número de pontos para integração em b
     //cout << "bmax = "<< bmax <<", nb =" << nb << endl;
-    //const SkewCorrection skew = compute_skew_correction(x, 0.0, Q2, M, modelo);
-    return integrate_simpson(sig_b, 0.0, bmax, nb); //* skew.factor;
+    //const SkewCorrection skew = compute_skew_correction(x, 0.0, Q2, M, modelo, fc);
+    return integrate_simpson(sig_b, 0.0, bmax, nb);// * skew.factor;
     }
 
     double dN_domega(double omega, double sqrt_s, Nucleus&Nucleo, double bmin)
@@ -127,7 +128,7 @@ namespace gamma_A{
 }
 
 double d_sigma_dy_AA(double y, double sqrt_s, double Q2, const Meson& M, std::string model,
-                    TA_Table& table, Nucleus& Nucleo)
+                    TA_Table& table, Nucleus& Nucleo, bool fc)
 {
 
     double omega_plus = (M.MV / 2.0) * exp(y);
@@ -143,8 +144,8 @@ double d_sigma_dy_AA(double y, double sqrt_s, double Q2, const Meson& M, std::st
 
     //std::cout<<"omega = " << omega_plus << "n(omega)=" << n_plus << std::endl;
 
-    double sigma_plus  = sigma(W_plus, Q2, M, model, table, Nucleo);
-    double sigma_minus = sigma(W_minus, Q2, M, model, table, Nucleo);
+    double sigma_plus  = sigma(W_plus, Q2, M, model, table, Nucleo, fc);
+    double sigma_minus = sigma(W_minus, Q2, M, model, table, Nucleo, fc);
     
 
     return n_plus * sigma_plus + n_minus * sigma_minus;
@@ -152,7 +153,7 @@ double d_sigma_dy_AA(double y, double sqrt_s, double Q2, const Meson& M, std::st
 
 double d_sigma_dy_AB(double y, double sqrt_s, double Q2, const Meson& M, std::string model,
                     TA_Table& tableA, TA_Table& tableB,
-                    Nucleus& NucleoA, Nucleus& NucleoB)
+                    Nucleus& NucleoA, Nucleus& NucleoB, bool fc)
 {
 
     double omega_plus = (M.MV / 2.0) * exp(y);
@@ -170,9 +171,8 @@ double d_sigma_dy_AB(double y, double sqrt_s, double Q2, const Meson& M, std::st
 
     //std::cout<<"omega = " << omega_plus << "n(omega)=" << n_plus << std::endl;
 
-    double sigma_plus  = sigma(W_plus, Q2, M, model, tableB, NucleoB);
-    double sigma_minus = sigma(W_minus, Q2, M, model, tableA, NucleoA);
-    
+    double sigma_plus  = sigma(W_plus, Q2, M, model, tableB, NucleoB, fc);
+    double sigma_minus = sigma(W_minus, Q2, M, model, tableA, NucleoA, fc);
 
     return n_plus * sigma_plus + n_minus * sigma_minus;
 }

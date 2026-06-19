@@ -104,13 +104,13 @@ std::string LHAnPDF::xf_vs_x(double Q2, int flavor)
     return filename;
 }
 
-double LHAnPDF::amplitude_p(double x, double Q2, const Meson& M)
+double LHAnPDF::amplitude_p(double x, double Q2, const Meson& M, bool fc)
 {
     // Implementação simplificada da amplitude de difração
     // A amplitude real envolveria a convolução da função de onda do méson com a função de dipolo N(r)
 
     auto amp_r = [&](double r) {
-        double Ov = overlap_r(r, Q2, M);
+        double Ov = overlap_r(r, Q2, M, fc);
         double sigma_qq = sigma_qq_p(x, r);
         return 0.5 * r * Ov * sigma_qq; // r de d²r = 2π r dr/4π
     };

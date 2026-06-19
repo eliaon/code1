@@ -6,7 +6,10 @@
 #include <vector>
 #include <string>
 
-
+void write_python_vector(std::ofstream& py,
+                         const std::string& name,
+                         const std::vector<double>& v);
+                         
 void read_two_columns(
     const std::string& filename,
     std::vector<double>& x,
@@ -36,5 +39,5 @@ void read_rapidity_hepdata(
     std::vector<double>& dsdy,
     std::vector<double>& err);
 
-
+void letra_slide(std::ofstream& py);
 #endif // PLOT_IO_HPP

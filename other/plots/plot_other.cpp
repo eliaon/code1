@@ -12,7 +12,8 @@
 #include <sstream>
 #include <utility>
 #include <vector>
-
+#include <omp.h>
+#include <thread>
 
 namespace plt = matplotlibcpp;
 
@@ -137,60 +138,86 @@ void plot_N_dglap(std::string csv_file1, std::string csv_file2)
 
 // -------------- PLOTA AS CURVAS DE N
 
-void plot_N_models(const std::vector<std::pair<std::string,std::string>>& files, double x)
+void plot_N_models(const std::vector<std::pair<std::string,std::string>>& files,
+                   double x)
 {
-    plt::figure_size(700,500);
+    std::string pyfile =
+        "out/plots/N/tmp_plot_N.py";
 
-    for (const auto& [fname, label] : files)
+    std::ofstream py(pyfile);
+
+    if(!py.is_open())
     {
-        std::vector<double> r2, N;
-
-        std::ifstream fin(fname);
-        if (!fin.is_open()) {
-            std::cerr << "Erro ao abrir: " << fname << std::endl;
-            continue;
-        }
-
-        std::string line;
-        std::getline(fin, line); // pula header
-
-        while (std::getline(fin, line))
-        {
-            std::stringstream ss(line);
-            std::string val1, val2;
-
-            std::getline(ss, val1, ',');
-            std::getline(ss, val2, ',');
-
-            r2.push_back(std::stod(val1));
-            N.push_back(std::stod(val2));
-        }
-
-        plt::plot(r2, N, {{"label", label}});
+        std::cerr << "Erro ao criar script Python.\n";
+        return;
     }
 
-    plt::xlabel("$r$");
-    plt::ylabel("$N_p$");
+    py << "import matplotlib.pyplot as plt\n";
+    py << "import csv\n\n";
+    letra_slide(py);
 
-    plt::title("Amplitude de dipolo $N_p(r)$ para diferentes modelos ");
+    py << "plt.figure(figsize=(9,6))\n\n";
 
-    plt::xlim(0.001,10.0);
-    plt::ylim(0.0001,1.2);
+    for(const auto& [fname,label] : files)
+    {
+        py << "r=[]\n";
+        py << "N=[]\n";
 
-    PyRun_SimpleString( "import matplotlib.pyplot as plt\n"
-                        "plt.yscale('log')\n"
-                        "plt.xscale('log')\n"
+        py << "with open(r'" << fname << "') as f:\n";
+        py << "    reader = csv.reader(f)\n";
+        py << "    next(reader)\n";
+        py << "    for row in reader:\n";
+        py << "        r.append(float(row[0]))\n";
+        py << "        N.append(float(row[1]))\n";
+/*
+        py << "plt.plot(r2, N, label=r'"
+           << label
+           << "')\n\n";
+*/
+        
+        py << "plt.plot([rr**2 for rr in r], "
+      "N, "
+      "label=r'" << label << "')\n\n";
+    }
 
-    );
+    py << "plt.xlabel(r'$r^2$')\n";
+    py << "plt.ylabel(r'$N_p$')\n";
 
-    plt::grid(true);
-    plt::legend();
+    py << "plt.title(r'Amplitudes de dipolo em x = "+ doubleParaString(x) + "')\n";
+
+  //  py << "plt.xscale('log')\n";
+  //  py << "plt.yscale('log')\n";
+
+    py << "plt.xlim(0.001,100.0)\n";
+    py << "plt.ylim(1e-4,1.2)\n";
+
+    py << "plt.grid(True)\n";
+    py << "plt.legend()\n";
 
     std::string filename =
-        "out/plots/N/N_models_" + timestamp() + "_x=" + doubleParaString(x) + ".pdf";
+        "out/plots/N/N_models_"
+        + timestamp()
+        + "_x="
+        + doubleParaString(x)
+        + ".pdf";
 
-    plt::save(filename);
-    plt::show();
+    py << "plt.savefig(r'" << filename << "')\n";
+    py << "plt.show()\n";
+
+    py.close();
+
+    std::cout << "Executando script Python...\n";
+
+    std::string cmd = "python3 \"" + pyfile + "\"";
+
+    int ret = std::system(cmd.c_str());
+
+    if(ret != 0)
+        std::cerr << "Erro ao executar Python.\n";
+    else
+        std::cout << "Figura salva em: "
+                  << filename
+                  << std::endl;
 }
 
 void compare_N_models(double x)
@@ -536,30 +563,194 @@ plt::show();
 }
 }
 
+void plot_overlap_models(std::vector<std::pair<std::string, std::string>>& files, const Meson& M, bool fc){
 
 
-void plot_XY(std::vector<double> x, std::vector<double> y, std::string xlabel, std::string ylabel, std::string title)
+    std::string pyfile =
+        "out/plots/overlap/tmp_plot_overlap.py";
+
+    std::ofstream py(pyfile);
+
+    if(!py.is_open())
+    {
+        std::cerr << "Erro ao criar script Python.\n";
+        return;
+    }
+
+    py << "import matplotlib.pyplot as plt\n";
+    py << "import csv\n\n";
+
+    letra_slide(py);
+
+    py << "plt.figure(figsize=(9,6))\n\n";
+
+    for(const auto& [fname,label] : files)
+    {
+        py << "r=[]\n";
+        py << "ov=[]\n";
+
+        py << "with open(r'" << fname << "') as f:\n";
+        py << "    reader = csv.reader(f)\n";
+        py << "    next(reader)\n";
+        py << "    for row in reader:\n";
+        py << "        r.append(float(row[0]))\n";
+        py << "        ov.append(float(row[1]))\n";
+
+        if(label == "BG")
 {
-    std::cout << "plot_XY: x.size() = " << x.size() << ", y.size() = " << y.size() << std::endl;
-    plt::figure_size(800,600);
-    plt::plot(x, y, {{"label","Dados"}});
-
-    std::cout << "Iniciando pyrun...\n";
-    PyRun_SimpleString(
-        "import matplotlib.pyplot as plt\n"
-        "plt.gca().set_xscale('log')\n"
-    );
-
-    plt::xlabel(xlabel);
-    plt::ylabel(ylabel);
-    plt::title(title);
-    plt::legend();
-    plt::grid(true);
-
-    std::string out =
-        "out/plots/other/" + title + "_" + timestamp() + ".pdf";
-
-    plt::save(out);
-    plt::show();
+    py << "plt.plot(r, ov,"
+          " color='black',"
+          " linestyle='-',"
+          " linewidth=3,"
+          " label=r'" << label << "')\n\n";
 }
+else if(label == "GLC")
+{
+    py << "plt.plot(r, ov,"
+          " color='red',"
+          " linestyle='--',"
+          " linewidth=4,"
+          " label=r'" << label << "')\n\n";
+}
+else
+{
+    py << "plt.plot(r, ov,"
+          " linewidth=4,"
+          " label=r'" << label << "')\n\n";
+}
+    }
+
+    py << "plt.xlabel(r'$r (fm)$')\n";
+    py << "plt.ylabel(r'Overlap $r \\Psi_V \\Psi_{\\gamma}$')\n";
+    py << "plt.title(r'Função de overlap do méson $\\"
+   << M.meson
+   << "$')\n";
+
+    py << "plt.xscale('log')\n";
+  //  py << "plt.yscale('log')\n";
+    if(M.meson == "psi" || M.meson == "upsilon")
+    {
+        py << "plt.xlim(0.0001,1.0)\n";
+        py << "plt.ylim(0.0, 0.025)\n";
+    }
+
+    else if(M.meson == "phi" || M.meson == "rho"){
+    py << "plt.xlim(0.01,3.0)\n";
+    py << "plt.ylim(0.0, 0.01)\n";
+    }else {
+        throw std::runtime_error("Meson desconhecido: " + M.meson);
+    }
+        
+
+    py << "plt.grid(True)\n";
+    py << "plt.legend()\n";
+
+    std::string filename =
+        "out/plots/overlap/" + M.meson + "/overlap_" + M.meson + (fc ? "_fc" : "") + "_" + timestamp() + ".pdf";
+
+    py << "plt.savefig(r'" << filename << "')\n";
+    py << "plt.show()\n";
+
+    py.close();
+
+    std::cout << "Executando script Python...\n";
+
+    std::string cmd = "python3 \"" + pyfile + "\"";
+
+    int ret = std::system(cmd.c_str());
+
+    if(ret != 0)
+        std::cerr << "Erro ao executar Python.\n";
+    else
+        std::cout << "Figura salva em: "
+                  << filename
+                  << std::endl;
+
+}
+
+
+
+void plot_XY(const std::vector<double>& x,
+             const std::vector<double>& y,
+             const std::string& xlabel,
+             const std::string& ylabel,
+             const std::string& title)
+{
+    if(x.size() != y.size())
+    {
+        throw std::runtime_error(
+            "plot_XY: x.size() != y.size()");
+    }
+
+    std::string pyfile =
+        "out/plots/other/tmp_plot_XY.py";
+
+    std::ofstream py(pyfile);
+
+    if(!py.is_open())
+    {
+        std::cerr << "Erro ao criar script Python.\n";
+        return;
+    }
+
+    py << "import matplotlib.pyplot as plt\n\n";
+
+    letra_slide(py);
+
+    py << "plt.figure(figsize=(9,6))\n\n";
+
+    write_python_vector(py, "x", x);
+    write_python_vector(py, "y", y);
+
+    py << "plt.plot("
+          "x,"
+          "y,"
+          "color='black',"
+          "linewidth=3"
+          ")\n\n";
+
+    py << "plt.xscale('log')\n";
+    py << "plt.xlim(1e-6,3.0)\n";
+    //py << "plt.ylim(0,1.2)\n";
+
+    py << "plt.xlabel(r'" << xlabel << "')\n";
+    py << "plt.ylabel(r'" << ylabel << "')\n";
+    py << "plt.title(r'" << title << "')\n";
+
+    py << "plt.grid(True, which='both', "
+          "linestyle='--', alpha=0.6)\n";
+
+    std::string filename =
+        "out/plots/other/"
+        + title
+        + "_"
+        + timestamp()
+        + ".pdf";
+
+    py << "plt.savefig(r'" << filename
+       << "', bbox_inches='tight')\n";
+
+    py << "plt.show()\n";
+
+    py.close();
+
+    std::cout << "Executando script Python...\n";
+
+    std::string cmd =
+        "python3 \"" + pyfile + "\"";
+
+    int ret = std::system(cmd.c_str());
+
+    if(ret != 0)
+    {
+        std::cerr << "Erro ao executar Python.\n";
+    }
+    else
+    {
+        std::cout << "Figura salva em: "
+                  << filename
+                  << '\n';
+    }
+}
+
 

@@ -51,11 +51,10 @@ double N_p(double r,  double x, const param_IIM& param)
 
 double sigma_qq(double r, double x, const param_IIM& param){return param.sigma0 * N_p(r, x, param);}
 
-double amplitude_p(double x, double Q2, const Meson& M, param_IIM param)
+double amplitude_p(double x, double Q2, const Meson& M, param_IIM param, bool fc)
 {
-    auto amp_r = [x, Q2, &M, param](double r) {
-        //double sqrt_fc = std::sqrt(f_c(r, -0.979599, 0.403569)); // valores de B e omega fitados no minuit para o proton
-        double Ov = sigma_qq(r, x, param) * overlap_r(r, Q2, M);// * sqrt_fc; // r de d²r = 2π r dr
+    auto amp_r = [x, Q2, &M, param, fc](double r) {
+        double Ov = sigma_qq(r, x, param) * overlap_r(r, Q2, M, fc);// * sqrt_fc; // r de d²r = 2π r dr
         return r * Ov;
     };
     double amp = 0.5 * integrate_simpson(amp_r, 1e-4, 10.0, 300);

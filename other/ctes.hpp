@@ -1,6 +1,9 @@
 #ifndef CTES_H
 #define CTES_H
 
+extern const double B_fc;
+extern const double omega_fc;
+
 extern const double rmin;
 extern const double rmax;
 extern const double Nr;

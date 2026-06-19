@@ -17,5 +17,18 @@ void plot_sigma_placeholder(std::string csv_file, std::string dipolemodel, std::
 void plot_sigma_placeholder(std::string csv_file, std::string dipolemodel, std::string meson, Nucleus& nucleus);
 
 void plot_sigma_gammaA(std::string meson, std::string csv, std::string modelo, Nucleus& nucleus);
+void plot_sigma_models(const std::vector<std::pair<std::string,std::string>>& files, const Meson& M,
+                   bool fc);
 
+
+
+
+
+
+
+
+
+
+
+    
 #endif

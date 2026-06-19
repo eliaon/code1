@@ -155,16 +155,7 @@ void plot_sigma_Jpsi(std::string csv_file, std::string dipolemodel)
 {
     int Q2 = 0;
 
-    std::vector<int> dataset;
-    std::vector<double> W_exp, sigma_exp, err_exp;
-
-    read_sigma_exp(
-        "out/csv/sigma/psi/data/sigma_gammap_jpsi.csv",
-        dataset,
-        W_exp,
-        sigma_exp,
-        err_exp);
-
+   
     // =========================================================
     // carregar curvas teóricas
     // =========================================================
@@ -194,6 +185,15 @@ void plot_sigma_Jpsi(std::string csv_file, std::string dipolemodel)
     // =========================================================
     // estilos
     // =========================================================
+ std::vector<int> dataset;
+    std::vector<double> W_exp, sigma_exp, err_exp;
+
+    read_sigma_exp(
+        "out/csv/sigma/psi/data/sigma_gammap_jpsi.csv",
+        dataset,
+        W_exp,
+        sigma_exp,
+        err_exp);
 
     std::map<int,std::string> exp_map = {
         {0,"H1"},
@@ -1239,4 +1239,220 @@ void plot_sigma_gammaA(std::string meson, std::string csv,
     }
     }
     
+}
+void plot_sigma_models(const std::vector<std::pair<std::string,std::string>>& files, const Meson& M,
+                   bool fc)
+{
+    std::string pyfile =
+        "out/plots/sigma/tmp_plot_sigma.py";
+
+    std::ofstream py(pyfile);
+
+    
+
+    if(!py.is_open())
+    {
+        std::cerr << "Erro ao criar script Python.\n";
+        return;
+    }
+
+    py << "import matplotlib.pyplot as plt\n";
+    py << "import csv\n\n";
+    letra_slide(py);
+
+    py << "plt.figure(figsize=(9,6))\n\n";
+if(M.meson == "phi"){
+    std::vector<int> dataset_fixedpoint;
+
+    std::vector<double>
+        W_fixedpoint,
+        sigma_fixedpoint,
+        error_fixedpoint;
+
+    read_sigma_exp(
+        "out/csv/sigma/phi/data/phi_fixedpoint_data(nb).csv",
+        dataset_fixedpoint,
+        W_fixedpoint,
+        sigma_fixedpoint,
+        error_fixedpoint
+    );
+
+    std::vector<int> dataset_ZEUS;
+
+    std::vector<double>
+        W_ZEUS,
+        sigma_ZEUS,
+        error_ZEUS;
+
+    read_sigma_exp(
+        "out/csv/sigma/phi/data/phi_sigma_expdata_ZEUS(1994).csv",
+        dataset_ZEUS,
+        W_ZEUS,
+        sigma_ZEUS,
+        error_ZEUS
+    );
+     write_python_vector(py,"W_fixedpoint",W_fixedpoint);
+    write_python_vector(py,"sigma_fixedpoint",sigma_fixedpoint);
+    write_python_vector(py,"err_fixedpoint",error_fixedpoint);
+
+    py << "plt.errorbar("
+          "W_fixedpoint,"
+          "sigma_fixedpoint,"
+          "yerr=err_fixedpoint,"
+          "fmt='o',"
+          "capsize=3,"
+          "color='black',"
+          "label='Fixed target')\n\n";
+
+    write_python_vector(py,"W_ZEUS",W_ZEUS);
+    write_python_vector(py,"sigma_ZEUS",sigma_ZEUS);
+    write_python_vector(py,"err_ZEUS",error_ZEUS);
+
+    py << "plt.errorbar("
+          "W_ZEUS,"
+          "sigma_ZEUS,"
+          "yerr=err_ZEUS,"
+          "fmt='s',"
+          "capsize=3,"
+          "color='blue',"
+          "label='ZEUS (1994)')\n\n";
+    } else if(M.meson == "psi"){ {
+std::vector<int> dataset;
+    std::vector<double> W_exp, sigma_exp, err_exp;
+
+    read_sigma_exp(
+        "out/csv/sigma/psi/data/sigma_gammap_jpsi.csv",
+        dataset,
+        W_exp,
+        sigma_exp,
+        err_exp);
+
+    std::map<int,std::string> exp_map = {
+        {0,"H1"},
+        {1,"H1"},
+        {2,"ALICE"},
+        {3,"LHCb"}
+    };
+
+    std::map<std::string,std::string> colors = {
+        {"H1","blue"},
+        {"ALICE","black"},
+        {"LHCb","purple"}
+    };
+
+    std::map<std::string,std::string> markers = {
+        {"H1","o"},
+        {"ALICE","s"},
+        {"LHCb","^"}
+    };
+    for(const auto& exp : {"H1","ALICE","LHCb"})
+    {
+        py << "W=[]\n";
+        py << "S=[]\n";
+        py << "E=[]\n";
+
+        for(size_t i=0;i<W_exp.size();++i)
+        {
+            if(exp_map[dataset[i]] == exp)
+            {
+                py << "W.append(" << W_exp[i] << ")\n";
+                py << "S.append(" << sigma_exp[i] << ")\n";
+                py << "E.append(" << err_exp[i] << ")\n";
+            }
+        }
+
+        py << "plt.errorbar("
+              "W,S,"
+              "yerr=E,"
+              "fmt='" << markers[exp] << "',"
+              "color='" << colors[exp] << "',"
+              "capsize=3,"
+              "label='" << exp << "')\n\n";
+    };}
+    } else if(M.meson == "rho"){
+        std::vector<int> dataset_ALICE;
+
+        std::vector<double>
+            W_ALICE,
+            sigma_ALICE,
+            error_ALICE;
+
+            read_xyscan_csv("out/csv/sigma/rho/data/rho_photoproduction_ZEUS(abramovic2000).csv",
+                            W_ALICE,
+                            sigma_ALICE,
+                            error_ALICE);
+
+    write_python_vector(py,"W_ALICE",W_ALICE);
+    write_python_vector(py,"sigma_ALICE",sigma_ALICE);
+    write_python_vector(py,"err_ALICE",error_ALICE);
+
+    py << "plt.errorbar("
+          "W_ALICE,"
+          "sigma_ALICE,"
+          "yerr=err_ALICE,"
+          "fmt='^',"
+          "capsize=3,"
+          "color='black',"
+          "label='ZEUS')\n\n";                
+        } else {
+        std::cerr << "Meson sem dados experimentais: " << M.meson << std::endl;
+        return;
+    }
+    for(const auto& [fname,label] : files)
+{
+    py << "W=[]\n";
+    py << "sigma=[]\n";
+
+    py << "with open(r'" << fname << "') as f:\n";
+    py << "    reader = csv.reader(f)\n";
+    py << "    next(reader)\n";
+    py << "    for row in reader:\n";
+    py << "        W.append(float(row[0]))\n";
+    py << "        sigma.append(float(row[1]))\n";
+    py << "print('" << label << "', len(W))\n";
+    py << "plt.plot("
+          "W,"
+          "sigma,"
+          "lw=2,"
+          "label=r'" << label << "')\n\n";
+}
+
+    py << "plt.xlabel(r'$W$ (GeV)')\n";
+    py << "plt.ylabel(r'$\\sigma$ (nb)')\n";
+
+    py << "plt.title(r'Seção de choque de $\\gamma p \\to \\" << M.meson << " p$')\n";
+
+    py << "plt.xscale('log')\n";
+    py << "plt.yscale('log')\n";
+
+    py << "plt.xlim(8.0,3000.0)\n";
+    //py << "plt.ylim(,1.2)\n";
+
+    py << "plt.grid(True)\n";
+    py << "plt.legend()\n";
+
+    std::string filename =
+        "out/plots/sigma/"
+        + M.meson+"/" + M.nome +
+        + "_sigma_models_"
+        + timestamp()
+        + ".pdf";
+
+    py << "plt.savefig(r'" << filename << "')\n";
+    py << "plt.show()\n";
+
+    py.close();
+
+    std::cout << "Executando script Python...\n";
+
+    std::string cmd = "python3 \"" + pyfile + "\"";
+
+    int ret = std::system(cmd.c_str());
+
+    if(ret != 0)
+        std::cerr << "Erro ao executar Python.\n";
+    else
+        std::cout << "Figura salva em: "
+                  << filename
+                  << std::endl;
 }

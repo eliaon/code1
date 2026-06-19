@@ -32,7 +32,7 @@ double sigma_qq_p(double r, double x, double Delta,
                   const parametros_bCGC& params = bg_fitted);
 
 double amplitude_p(double x, double Delta, double Q2, const Meson& M,
-                   const parametros_bCGC& params = bg_fitted);
+                    bool fc = false);
 
 } // namespace bCGC
 

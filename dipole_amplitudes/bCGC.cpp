@@ -81,11 +81,11 @@ double sigma_qq_p(double r, double x, double Delta, const parametros_bCGC& param
     return 2.0 * integrate_simpson(b_integrand, 0.0, bmax, Nb);
 }
 
-double amplitude_p(double x, double Delta, double Q2, const Meson& M,
-                   const parametros_bCGC& params)
+double amplitude_p(double x, double Delta, double Q2, const Meson& M, bool fc)
 {
-    auto r_integrand = [x, Delta, Q2, &M, &params](double r) {
-        const double Ov = overlap_r(r, Q2, M);
+    const parametros_bCGC& params = bg_fitted;
+        auto r_integrand = [x, Delta, Q2, &M, &params, fc](double r) {
+        const double Ov = overlap_r(r, Q2, M, fc);
         const double sigma_dip = sigma_qq_p(r, x, Delta, params);
         return 0.5 * r * Ov * sigma_dip;
     };

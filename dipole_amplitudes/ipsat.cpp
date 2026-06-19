@@ -35,14 +35,13 @@ double sigma_qq_p(double r, double x, double Delta, DipoleAmplitude& dipole)
 
 
 //----------- amplitude -----------
-double amplitude_p(double x, double Delta, double Q2, const Meson& M,
-                 int Nr, int Nz,
-                 double rmin, double rmax)
+double amplitude_p(double x, double Delta, double Q2, const Meson& M, bool fc)
 {
+
     DipoleAmplitude dipole(MZ_IPSAT);
     dipole.EnableLookupTable();
     auto fr = [&](double r) {
-        double Ov = overlap_r(r, Q2, M);
+        double Ov = overlap_r(r, Q2, M, fc);
         double sigma_qq = sigma_qq_p(r, x, Delta, dipole);
         return 0.5 * r * Ov * sigma_qq; // r de d²r = 2π r dr
     };

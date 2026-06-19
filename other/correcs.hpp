@@ -20,16 +20,16 @@ struct SkewCorrection {
 };
 
 double calculate_lambda(double x, double Delta, double Q2, const Meson& M,
-                        std::string dipolemodel);
+                        std::string dipolemodel, bool fc);
 
 double RG(double x, double Q2, double lambda_e, const Meson& M);
 
 double beta(double x, double Q2, double lambda_e, const Meson& M);
 
 SkewCorrection compute_skew_correction(double x, double Delta, double Q2,
-                                       const Meson& M, const std::string& dipolemodel);
+                                       const Meson& M, const std::string& dipolemodel, bool fc);
 
-void debug_correc(std::string model);
+void debug_correc(std::string model, bool fc= false);
 
 double f_c(double r, double B, double omega, double R = 6.8);
 

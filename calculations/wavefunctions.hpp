@@ -15,10 +15,7 @@ double phi_T(double r, double z, const Meson& M);
 
 double phi_L(double r, double z, const Meson& M);
 
-double overlap_r(double r, double Q2, const Meson& M);
+double overlap_r(double r, double Q2, const Meson& M, bool fc);
 
-void overlap_csv(void);
-
-void overlap_csv_fc(void);
 
 #endif// WAVEFUNCTIONS_H

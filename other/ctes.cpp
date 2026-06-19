@@ -2,6 +2,8 @@
 #include <cmath>
 
 // --------- PARÂMETROS DE INTEGRAÇÃO ---------------
+const double B_fc = -0.979599;
+const double omega_fc = 0.403569;
 
 const double rmin = 1e-4;
 const double rmax = 20;

@@ -10,5 +10,6 @@ void plot_rapidez_PbPb_Jpsi(std::string csv_file, std::string model, double sqrt
 void plot_rapidez_PbPb_phi(std::string csv, std::string model, double sqrt_s);
 void plot_rapidez(std::string csv, std::string model, std::string meson, std::string collision,double sqrt_s);
 
-
+void plot_rapidezAA_models(const std::vector<std::pair<std::string,std::string>>& files, double sqrt_s, const Meson& M,
+                   bool fc);
 #endif
