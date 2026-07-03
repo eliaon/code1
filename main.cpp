@@ -18,18 +18,18 @@ int main() {
     }*/
     
 
-    //CSV::N_p("IPSAT");
+    //CSV::N_p("GBW(old)");
 
-    //CSV::sigma_gamma_p("GBW(new)"); 
+    //CSV::sigma_gamma_p("GBW(new)", true); 
 
     // para colisões A: GBW_Shadowing está disponível!
 
     //CSV::sigma_gamma_A("GBW(new)", proton, true);
 
     //Compare_all::N(1e-5);
-    Compare_all::sigma_gamma_p(false); 
+    //Compare_all::sigma_gamma_p(false); 
 
-    Compare_all::sigma_gamma_p(true); 
+    //Compare_all::sigma_gamma_p(true); 
 
     //Compare_all::rapidez_AA(3e3, Pb208, false);
     //Compare_all::rapidez_AA(3e3, Pb208, true);
@@ -37,7 +37,7 @@ int main() {
     //Compare_all::overlap(true);
     //Compare_all::overlap(false);
 
-    //CSV::rapidez_AA(5.36e3, "GBW(new)", Pb208, Pb208);
+    CSV::rapidez_AA(5.36e3, "GBW(new)", Pb208, Pb208, true);
     
 
     //Shadowing_factor_csv(3.16227);

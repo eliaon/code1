@@ -644,7 +644,7 @@ string N_file(double x, std::string modelo)
     {
         double frac = (double)i / (Npoints - 1);
         double N_val = get_Np(r_values[i], x, modelo); // exemplo para x=1e-4 e x0=1e-2
-        fout << r_values[i] << "," << N_val << "\n"; // converte r para fm
+        fout << r_values[i]/CFAC << "," << N_val << "\n"; // converte r para fm
     }
     return filename;
 }

@@ -301,8 +301,9 @@ void plot_rapidez_PbPb_phi(std::string csv,
     py << "\n";
 
     py << "fig = plt.figure(figsize=(8,6))\n";
+    py << "gs = fig.add_gridspec(2,1,height_ratios=[5,1])\n";
 
-    py << "ax1 = plt.subplot2grid((2,1),(0,0))\n";
+    py << "ax1 = fig.add_subplot(gs[0,0])\n";
 
     py << "ax1.plot(Y_th,rap_GLC,"
           "color='orange',"
@@ -354,7 +355,7 @@ py << "ax1.set_title(r'" << title.str() << "')\n";
 
     py << "\n";
 
-    py << "ax2 = plt.subplot2grid((2,1),(1,0))\n";
+    py << "ax2 = fig.add_subplot(gs[1,0],sharex=ax1)\n";
 
     py << "if len(Y_dev)>0:\n";
     py << "    ax2.plot("
@@ -601,7 +602,6 @@ if(M.meson == "phi"){
                   << filename
                   << std::endl;
 }
-
 
 
 

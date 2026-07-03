@@ -106,8 +106,8 @@ namespace gamma_A{
     double bmax = table.b_vals.back(); // limite de integração em b
     int nb = table.b_vals.size(); // número de pontos para integração em b
     //cout << "bmax = "<< bmax <<", nb =" << nb << endl;
-    //const SkewCorrection skew = compute_skew_correction(x, 0.0, Q2, M, modelo, fc);
-    return integrate_simpson(sig_b, 0.0, bmax, nb);// * skew.factor;
+    const SkewCorrection skew = compute_skew_correction(x, 0.0, Q2, M, modelo, fc);
+    return integrate_simpson(sig_b, 0.0, bmax, nb)* skew.factor;
     }
 
     double dN_domega(double omega, double sqrt_s, Nucleus&Nucleo, double bmin)

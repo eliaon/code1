@@ -93,7 +93,7 @@ string rapidezAA_file(double sqrt_s, const Meson& M, string modelo, Nucleus& Nuc
 }
     }
     void N_p(std::string model){
-        std::vector<double> x = {1e-2, 1e-3, 1e-4, 1e-5};
+        std::vector<double> x = {1e-2, 1e-3, 1e-4, 1e-5, 1e-6};
         std::vector<std::string> filenames;
 
         
